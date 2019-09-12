@@ -1,7 +1,7 @@
 % layout 'default';
 % title 'this page';
 
-<script type="text/javascript" src="https://westwind.backbone.site/site2/js/librtc.js"></script>
+<script type="text/javascript" src="https://westwind.backbone.site/js/librtc.js"></script>
 <script type="text/javascript">
 
 // const starttime = performance.now();  // perf
@@ -44,7 +44,7 @@ function loopstart(){
     wsCall();  // 起動先行
 
 function wsCall(){
-    ws = new WebSocket('wss://<%= $url_host %>/site2/wsocket/signaling');
+    ws = new WebSocket('wss://<%= $url_host %>/wsocket/signaling');
     console.log(" Websocket connect...");
     return ws;
 }
@@ -93,7 +93,7 @@ function wsCall(){
                }
 
                if ( evt.type === "oidnotice" ){
-                     localStorage.icon_url = "https://<%= $url_host %>/site2/geticon?oid=" + evt.oid;
+                     localStorage.icon_url = "https://<%= $url_host %>/geticon?oid=" + evt.oid;
                      usercheck(); 
                      return;
                }
@@ -568,7 +568,7 @@ function usercheck2(){
     if ((typeof(localStorage.icon_url) === 'undefined') || (localStorage.icon_url.match(/ciconimg/))) {
         %# icon_urlの文字列にciconimgが含まれる場合 頭文字でアイコン
         var char = localStorage.user.substr(0,1);
-            localStorage.icon_url = "https://<%= $url_host %>/site2/ciconimg?s=" + char ; //初期設定
+            localStorage.icon_url = "https://<%= $url_host %>/ciconimg?s=" + char ; //初期設定
     }  
 
     var icon = document.getElementById('uicon');
@@ -629,7 +629,7 @@ function upform(){
             %# レスポンスは確認のみ
         }
 
-        xhr.open("post","https://<%= $url_host %>/site2/iconupload");
+        xhr.open("post","https://<%= $url_host %>/iconupload");
 
         xhr.send(form_data);
 }
@@ -725,7 +725,7 @@ function handleError(error) {
 function getQrcodeTake(){
     // Take Over 　の　QRcodeを表示する
     var form_data = new FormData();
-    var encurl = encodeURI("https://<%= $url_host %>/site2/transferuser/" + localStorage.uid);
+    var encurl = encodeURI("https://<%= $url_host %>/transferuser/" + localStorage.uid);
         form_data.append("data" , encurl );
 
     var qrobj = document.getElementById('takeoverajaxpostdata');
@@ -737,7 +737,7 @@ function getQrcodeTake(){
             qrobj.innerHTML = xhr.responseText;
         }
 
-        xhr.open("post","https://<%= $url_host %>/site2/qrcode");
+        xhr.open("post","https://<%= $url_host %>/qrcode");
         xhr.send(form_data);
 }
 

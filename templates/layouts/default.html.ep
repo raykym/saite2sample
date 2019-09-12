@@ -26,8 +26,8 @@
 	   }
 	     
        </style>
-  <script type="text/javascript" src="https://westwind.backbone.site/site2/js/jstz.main.js"></script>
-  <script type="text/javascript" src="https://westwind.backbone.site/site2/js/sha3.js"></script>
+  <script type="text/javascript" src="https://westwind.backbone.site/js/jstz.main.js"></script>
+  <script type="text/javascript" src="https://westwind.backbone.site/js/sha3.js"></script>
   </head>
   <body><%= content %></body>
 </html>

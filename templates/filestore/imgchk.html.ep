@@ -15,11 +15,11 @@ window.onload = function(){
             if ( orient === ''){
                 divobj.setAttribute('width', '100%');
                 divobj.setAttribute('hight', '100%');
-                divobj.src = "https://<%= $url_host %>/site2/imgout?id=" + id;
+                divobj.src = "https://<%= $url_host %>/imgout?id=" + id;
             } else {
                 divobj.setAttribute('width', '');
                 divobj.setAttribute('hight', '');
-                divobj.src = "https://<%= $url_host %>/site2/imgout?id=" + id + "&orient=" + orient;
+                divobj.src = "https://<%= $url_host %>/imgout?id=" + id + "&orient=" + orient;
             }
 
      } //keycode

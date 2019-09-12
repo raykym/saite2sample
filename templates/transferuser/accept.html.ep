@@ -5,7 +5,7 @@
 
 function cansel(){
 
-    window.location.replace("https://<%= $url_host %>/site2/"); // site2 topへ
+    window.location.replace("https://<%= $url_host %>/"); // site2 topへ
 
 }
 
@@ -36,9 +36,9 @@ function entry(){
 
         xhr.onload = function(e){
              console.log(xhr.responseText);
-             window.location.replace("https://<%= $url_host %>/site2/"); // site2 topへ
+             window.location.replace("https://<%= $url_host %>/"); // site2 topへ
              }
-        xhr.open('post', "https://<%= $url_host %>/site2/obsoleteuid");
+        xhr.open('post', "https://<%= $url_host %>/obsoleteuid");
 
         xhr.send(form_data);
 }
