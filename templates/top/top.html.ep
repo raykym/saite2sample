@@ -1,0 +1,999 @@
+% layout 'default';
+% title 'this page';
+
+<script type="text/javascript" src="https://westwind.backbone.site/site2/js/librtc.js"></script>
+<script type="text/javascript">
+
+// const starttime = performance.now();  // perf
+
+    var timerarray = [];
+    var maintimerID = null;
+
+    loopstart();  // 起動先行
+
+function loopstart(){
+        // timer objectを繰り返し実行する
+        maintimerID = window.setInterval( function() {
+            if ( timerarray.length == 0 ) { return; }
+            var fn = timerarray.shift();
+                fn;
+                timerarray.push(fn);  // 再度戻す
+            console.log("DEBUG: timearray: " + timerarray.length );
+        },10000); // 10sec
+}
+
+    var socket_wait = null;
+    var ws = null;
+
+    var startflg = null;
+    var connid = null;
+
+    var sendcallflg = null;
+
+    var elobj = {}; //createElementの格納場所  削除で利用 chatroom List用
+
+    var chatRoomInfo = {}; // chatroom情報
+        chatRoomInfo.callStat = "call";  // call前の状態
+
+    var memberList = {};  // chatroomのメンバーリスト格納場所
+        memberList.memberList = new Array;
+        memberList.memberListObjs = new Object;
+        memberList.memberList_diff = new Array;
+        memberList.rtctype = new Object;
+
+    wsCall();  // 起動先行
+
+function wsCall(){
+    ws = new WebSocket('wss://<%= $url_host %>/site2/wsocket/signaling');
+    console.log(" Websocket connect...");
+    return ws;
+}
+
+
+    ws.onopen = function(){
+        console.log('Connection opened');
+
+        socket_wait = setInterval(function (){
+           var dummsg = {"dummy":"dummy"};
+           ws.send(JSON.stringify(dummsg));
+           console.log("socket wait sending!");
+            }, 50000)
+
+        timerarray.push(socket_wait);
+        usercheck(); // window.onloadから移転	
+        sendsession();
+
+    };   // onopen
+
+    ws.onclose = function(){
+        console.log("WS Connection close... reconnect...");
+        clearInterval(socket_wait); // 50sec dummy STOP
+        alert("制御用接続が切れました。通話はリロードするまで続けられますが文字チャットなどは使えません。");
+    };
+
+    ws.onerror = function(){
+       alert("please Reload, Reconnect websocket!");
+    };
+
+    ws.onmessage = function(msg){
+                var evt = JSON.parse(msg.data);
+                console.log(JSON.stringify(evt));
+
+
+           %# dummyが来たらパス
+           if ( evt.dummy ){
+               return;
+           }
+
+           if ( evt.type ) {
+
+               if ( evt.type === "wsidnotice" ){
+                     sessionStorage.wsid = evt.wsid;
+                     return;
+               }
+
+               if ( evt.type === "oidnotice" ){
+                     localStorage.icon_url = "https://<%= $url_host %>/site2/geticon?oid=" + evt.oid;
+                     usercheck(); 
+                     return;
+               }
+
+               if ( evt.type === "openchat" ){
+                  var liobj = document.createElement("li");
+                      liobj.setAttribute("id" , "openchatout");
+                      liobj.innerHTML = "<img src=" + evt.icon_url + " > [" + evt.user + "] " + evt.text ;
+                  var ulobj = document.getElementById("openchat");
+
+                      ulobj.appendChild(liobj);
+                  return;
+               }
+
+               if ( evt.type === "roomlistnotice" ) {
+
+                   var roomlist = evt.chatroomlist;
+
+                       elobj.aobj = new Array;
+
+                   if (roomlist.length === 0 ){ 
+
+                       elobj.aobj.push(document.createElement("p"));
+                       elobj.aobj[0].innerHTML = "<H1> None chat room... <H1>";
+                       var roomdiv = document.getElementById("roomlistout");
+                           roomdiv.appendChild(elobj.aobj[0]); // 固定
+
+                   } else {
+
+                   for (var e in roomlist) {
+                       console.log("DEBUG: e:" + e);
+
+                       elobj.aobj.push(document.createElement("button"));
+                       elobj.aobj[e].setAttribute("id", "roomlistout" + e);
+                       elobj.aobj[e].setAttribute("class", "addbutton");
+                       elobj.aobj[e].innerHTML = roomlist[e];
+                       elobj.aobj[e].value = roomlist[e];
+                       elobj.aobj[e].onclick = function(){
+                                              var mess = {"type" : "entrychatroom" , 
+                                                          "roomname": this.value ,
+                                                          "user" : localStorage.user ,
+                                                          "icon_url" : localStorage.icon_url ,
+                                                          "wsid" : sessionStorage.wsid ,
+                                                          "pubstat" : "public"
+                                                         };
+                                              var messjson = JSON.stringify(mess);
+                                              ws.send(messjson);
+                                              console.log("DEBUG: " + messjson );
+ 
+                                              chatRoomInfo.roomname = this.value; 
+                                              chatRoomInfo.pubstat = "public";
+                                              };
+
+                       var roomdiv = document.getElementById("roomlistout");
+                           roomdiv.appendChild(elobj.aobj[e]);
+                       console.log("append element: " + roomlist[e] );
+                       } // for
+                      } // roomlist length else
+
+                   return;
+               }
+  
+               // memberListの受信
+               if ( evt.type === "reslist" ) {
+
+                   console.log("DEBUG: catch reslist");
+
+                   connid = evt.from; 
+
+                   memberList.reslist = evt.reslist;
+
+                   if ( memberList.memberList.length === 0 ) {
+                       // 初回のみ 
+                       memberList.memberList = JSON.parse(JSON.stringify(memberList.reslist)); //インスタンス実体 
+                       memberList.memberList_diff = memberList.memberList; // 初回はすべてが差分
+
+                   } else {
+
+                       // 2回目以降はこっち
+                       memberList.memberList_diff = new Array;  // 初期化
+
+                               memberList.reslist.filter( function (e , i ) {
+                                         // memberlistとreslistからダブらないものをピックアップ
+                                   var flg = 0;
+                                   memberList.memberList.filter( function(e2 ,i2){
+                                       if ( e.wsid == e2.wsid ){ 
+                                           flg = 1;
+                                           return;
+                                          }
+                                   });
+                                   if ( flg == 0 ) {
+                                             memberList.memberList_diff.push(e);
+                                   }
+                               });
+
+                       console.log("DEBUG: memberList_diff: " + JSON.stringify(memberList.memberList_diff) );
+
+
+                       // memberListにmemberList_diffをマージする
+                       memberList.memberList_diff.filter ( function(e,i){
+                           memberList.memberList.push(e);
+                       });
+
+                  } // if memberList.length
+
+                  for ( var i=0 ; i < memberList.memberList_diff.length ; i++) {
+
+                      var resline = memberList.memberList_diff[i];
+
+                      memberList.memberListObjs[resline.wsid] = document.createElement("li");
+                      memberList.memberListObjs[resline.wsid].setAttribute("id" , "chatroommember" + resline.wsid);
+                 
+                      // 自分用とそれ以外で表示を変える
+                      if ( sessionStorage.wsid === resline.wsid ) {
+                          memberList.memberListObjs[resline.wsid].innerHTML = "<button class='memlist' id='btn" + resline.wsid + "' onclick='call();' style='color: #00ff00;'><img src=" + resline.icon_url + " > [" + resline.user + "] Call </button><form class='memlist' id=choi" + resline.wsid + "><input type='radio' name='vvchoi' value='audio' checked>audio</label><input type='radio' name='vvchoi' value='video'>video</label></form><button class='memlist' value='Change Camera' onclick='changecam();'>Change Camera</button><div id='div" + resline.wsid + "'></div>";
+                          } else {
+                          memberList.memberListObjs[resline.wsid].innerHTML = "<img src=" + resline.icon_url + " > [" + resline.user + "]<div id='div" + resline.wsid + "'></div>";
+                          }
+                      var ulobj = document.getElementById("chatroommember");
+
+                          ulobj.appendChild(memberList.memberListObjs[resline.wsid]);
+
+                      //ラジオボタンの入力イベント
+                      if ( sessionStorage.wsid == resline.wsid ) {
+                          document.getElementById("choi" + resline.wsid ).addEventListener('click', function(){
+
+                              // 自分で自分に更新させる
+                              var mess = { "getrtctype" : "dummy" ,
+                                           "sendto" : sessionStorage.wsid ,
+                                           "from" : sessionStorage.wsid ,
+                                         };    
+                              var messjson = JSON.stringify(mess);
+                              ws.send(messjson);
+
+                              console.log("DEBUG: getrtctype self sending...");
+
+                              reloadmem(); // タグの更新の為にリロードさせる
+                          }); 
+                      }
+
+                  } // for
+
+                  // リストが表示されたらaudioかvideoを判別して表示する
+                  for (var aline in memberList.memberList){
+                      var mess = { "getrtctype" : "dummy" ,
+                                   "sendto" : memberList.memberList[aline].wsid ,
+                                   "from" : sessionStorage.wsid ,
+                                 };    
+                      var messjson = JSON.stringify(mess);
+                      ws.send(messjson);
+
+                      console.log("DEBUG: getrtctype send: " + memberList.memberList[aline].wsid );
+                  }
+                  
+                   return;
+               }  // if reslist
+
+               // reload要求
+               if ( evt.type === "reloadmember" ){
+                   console.log("DEBUG: GET reloadmemberlist!!");
+                   member();       
+                   return;
+               }
+
+               // チャットルーム内のチャット
+               if ( evt.type === "chatroomchat" ){
+                  var liobj = document.createElement("li");
+                      liobj.setAttribute("id" , "chatroomout");
+                      liobj.innerHTML = "<img src=" + evt.icon_url + " > [" + evt.user + "] " + evt.text ;
+                  var ulobj = document.getElementById("chatroomout");
+
+                      ulobj.insertBefore(liobj,ulobj.firstChild);
+                  return;
+               }
+
+               // public chatroom List からのエントリー受付
+               if ( evt.type === "entrychatroomact" ){
+
+               // chatroom char chat 別の場所に重複あり
+                    document.getElementById('cchat').addEventListener("keydown" , function(){   
+                        if ((event.keyCode === 13) && (document.getElementById('cchat').value )) {
+                            var mess = {"type" : "chatroomchat" ,
+                                        "text": document.getElementById('cchat').value ,
+                                        "user" : localStorage.user ,
+                                        "icon_url" : localStorage.icon_url,
+                                        "roomname" : chatRoomInfo.roomname ,
+                                        "pubstat" : chatRoomInfo.pubstat
+                                        };
+                            var messjson = JSON.stringify(mess);
+                            ws.send(messjson);
+                            document.getElementById('cchat').value = "";
+                            console.log("DEBUG: send chatroomchat");
+                        }
+                    });
+
+                   member();
+                   reloadmem();
+
+                   // makechatroomを表示に変更する
+                   menuList.makeChatRoomToggle = false;
+                   document.getElementById("makechatroom").style.display="block";  // 表示
+                   document.getElementById('roomdisplay').innerHTML = chatRoomInfo.roomname ;
+
+                   return;
+               }
+
+               // usercheckでuidの確認レスポンス
+               if ( evt.type === "resobsoleteuid" ){
+                       if (evt.res === "nonobsolete"){
+                           console.log("DEBUG: nonobsolete...");
+                           usercheck2();
+                       } else if ( evt.res === "obsolete" ) {
+                           console.log("DEBUG: obsolete...reset uid");
+                           delete localStorage.uid;
+                           usercheck2();
+                       }
+                return;
+               }
+
+
+           // webRTC
+    // SDP,ICE処理
+    var id = evt.from;
+    var target = evt.sendto;  // call時はundef
+
+    console.log("id:(from)" + id);
+    console.log("target:(sendto)" + target);
+
+       if (evt.type === 'call') {
+            console.log('Receive call');
+
+           if (isConnectPossible()) {
+             %# callを受信したら、responseを返す
+              var resp = JSON.stringify({"type":"response","sendto":id});
+              ws.send(resp);
+              console.log("send response----->");
+              }
+              else {
+                  console.warn('max connections. so ignore call');
+              }
+              return;
+       }
+              else if (evt.type === 'response'){
+                console.log('Receive response');
+                sendOffer(id);
+                return;
+            }  else if (evt.type === 'offer') {
+              console.log("Received offer, set offer, sending answer....")
+              onOffer(evt);
+            } else if (evt.type === 'answer') {  // **
+              console.log('Received answer, settinng answer SDP');
+              onAnswer(evt);
+            } else if (evt.type === 'candidate') { // **
+              console.log('Received ICE candidate...');
+              onCandidate(evt);
+            } else if (evt.type === 'bye') { // **
+              console.log("disconnected");
+              //stop();
+              detachvoice(id); // force detach video
+              stopAllConnections();
+           }
+
+           // over webRTC
+
+           if ( evt.type === "detachvoice" ){
+              //相手のhungupを受けてstreamを切り離す
+               detachvoice(evt.from); // force detach video
+            //   stopConnection(evt.from);
+
+               delMemberList(evt.from);
+    
+               console.log("DEBUG: detachvoice: evt.from ");
+
+               return;
+           }
+
+           if ( evt.type === "resiconrotate" ){
+               console.log("DEBUG: recieve: resiconrotate");
+
+               var imgobj = document.getElementById('uicon');
+                   imgobj.src = localStorage.icon_url + "&oriented=" + evt.oriented; //　更新のためにパラメータを付加
+
+               return;
+           }
+
+
+
+
+               return;
+           }  // if type
+
+           if ( evt.getrtctype ) {
+               // 他のブラウザからaudio/videoのラジオボックスの状態を返信する
+               var rtcelm = document.getElementById("choi" + sessionStorage.wsid);
+               var nodeList = rtcelm.vvchoi;
+               var mess = { "resrtctype" : nodeList.value ,
+                            "sendto" : evt.from ,
+                            "from": sessionStorage.wsid
+                          };
+               var messjson = JSON.stringify(mess);
+
+               ws.send(messjson); 
+
+               console.log("DEBUG: resrtctype send " + messjson );
+
+               return;
+           }
+
+           // 自分が出したgetrtctypeのレスポンスを受け取る
+           if ( evt.resrtctype ){
+               console.log("DEBUG: get resrtctype");
+ 
+               //   memberList.memberListは表示情報の配列
+               //   memberList.rtctype.wsid はWebRTCの種別でaudioかvideoのオブジェクトをwsidのキーで登録
+               //   rtctypeはタグから取得すると大文字のケースが存在するのでtoLowerCaseで比較する
+
+               for ( var aline in memberList.memberList ){
+                   // 受信したresrtctypeの状態を確認する 基本1人づつ受信する
+
+                   if (( evt.from === memberList.memberList[aline].wsid )&&(evt.from === sessionStorage.wsid)) {
+                       console.log("DEBUG: own element " + evt.from + " | " + memberList.memberList[aline].wsid);
+
+                       if ( typeof(memberList.rtctype[evt.from]) === 'undefined' ) {
+
+                           //エレメント設定
+                           var elm = document.getElementById("div" + evt.from);
+
+                           memberList.rtctype[evt.from] = document.createElement(evt.resrtctype); // audio or video
+                           memberList.rtctype[evt.from].setAttribute('id' , "stream" + evt.from );
+                           memberList.rtctype[evt.from].setAttribute('autoplay' , 'autoplay');
+                           memberList.rtctype[evt.from].setAttribute('controls', 'controls');
+
+                           elm.appendChild(memberList.rtctype[evt.from]); 
+
+                           chatRoomInfo.rtctype = evt.resrtctype;
+
+                           console.log("DEBUG: set rtctype: " + evt.resrtctype );
+                           console.log("DEBUG: connid: " + connid );
+
+                           if (( typeof(connid) !== 'undefined' )&& (typeof(startflg) !== 'started' ) ){  // reslistを1回受け取ってから
+                               console.log("DEBUG: startflg: " + startflg );
+                               startvoice();
+                            }
+
+                           return;
+                       } // undefined 
+
+
+                      // var tagname = memberList.rtctype[evt.from].tagName;
+                  else if ( memberList.rtctype[evt.from].tagName.toLowerCase() === evt.resrtctype ){
+                                  // 設定済で同じならパス
+                                  console.log("DEBUG: rtctype No change!" + tagname + " | " + evt.resrtctype);
+                                  return;
+                       } else {
+
+                              // エレメント再設定
+                           var elm = document.getElementById("div" + evt.from);
+                               elm.removeChild(memberList.rtctype[evt.from]);
+
+                           memberList.rtctype[evt.from] = document.createElement(evt.resrtctype); // audio or video
+                           memberList.rtctype[evt.from].setAttribute('id' , "stream" + evt.from );
+                           memberList.rtctype[evt.from].setAttribute('autoplay' , 'autoplay');
+                           memberList.rtctype[evt.from].setAttribute('controls', 'controls');
+
+                           elm.appendChild(memberList.rtctype[evt.from]); 
+
+                           chatRoomInfo.rtctype = evt.resrtctype;
+
+                           console.log("DEBUG: set rtctype: " + evt.resrtctype );
+                           console.log("DEBUG: connid: " + connid );
+     
+                           startflg = 'restart'; // 再設定なのでリスタート
+                           detachvoice(connid);  // localStreamを一度停止
+                  
+                           if (( typeof(connid) !== 'undefined' )&& (typeof(startflg) !== 'started' ) ){  // reslistを1回受け取ってから
+                               console.log("DEBUG: startflg: " + startflg );
+                               startvoice();
+                            }
+
+                           return; 
+                           } // else  if rtctype 以上が自分あてのrtctype処理
+                   //以下は他のメンバーのrtctype処理  
+                   } else if ( evt.from === memberList.memberList[aline].wsid ) { // if [aline].wsid  sessionStorage.wsid
+                       // evtとループのwsidが一致すれば
+
+                       console.log("DEBUG: resrtctype other member ");
+
+                       if ( typeof(memberList.rtctype[evt.from]) === 'undefined' ) {
+
+                           //エレメント設定
+                           var elm = document.getElementById("div" + evt.from);
+                           memberList.rtctype[evt.from] = document.createElement(evt.resrtctype); // audio or video
+                           memberList.rtctype[evt.from].setAttribute('id' , "stream" + evt.from );
+                           memberList.rtctype[evt.from].setAttribute('autoplay' , 'autoplay');
+                           memberList.rtctype[evt.from].setAttribute('controls', 'controls');
+
+                           elm.appendChild(memberList.rtctype[evt.from]); 
+                           console.log("DEBUG: set rtctype: " + evt.resrtctype + " wsid: " + evt.from );
+
+                           return;
+
+                       } 
+
+                       var tagname = memberList.rtctype[evt.from].tagName;    //何故か大文字が入るケースが在る
+                       console.log("DEBUG: tagname: " + tagname );
+                       if ( tagname.toLowerCase() === evt.resrtctype ) {
+                           // 設定済で同じならパス
+                                  console.log("DEBUG: rtctype No change! " + tagname + " | " + evt.resrtctype);
+                                  return;
+
+                       }  else {
+                           // 再設定
+                           var elm = document.getElementById("div" + evt.from);
+                               elm.removeChild(memberList.rtctype[evt.from]);
+
+                           memberList.rtctype[evt.from] = document.createElement(evt.resrtctype); // audio or video
+                           memberList.rtctype[evt.from].setAttribute('id' , "stream" + evt.from );
+                           memberList.rtctype[evt.from].setAttribute('autoplay' , 'autoplay');
+                           memberList.rtctype[evt.from].setAttribute('controls', 'controls');
+
+                           elm.appendChild(memberList.rtctype[evt.from]); 
+                           console.log("DEBUG: set rtctype: " + evt.resrtctype + " wsid: " + evt.from );
+
+                           return;
+                      } // else
+                   } // aline wsid else
+               } // for
+               return;
+           } //if resrtctype 
+
+
+
+    } // on message
+
+
+function usercheck(){
+    %# サーバー側への廃止アカウントのチェック
+    %#アカウント引き継ぎ済の場合、アカウントを削除する。
+        
+     var mess = { "type" : "obsoleteuid", "chkuid" : localStorage.uid }; // uidをolduidとして送る
+     var messjson = JSON.stringify(mess);
+     ws.send(messjson); //resolvはws経由で返る
+     console.log("DEBUG: send obsoleteuid");
+
+}
+
+function usercheck2(){
+    // uid削除機能を追加したので、別枠に
+    %# localStorageに従って初期設定を行う
+    //usercheckからwebsocketのレスポンスから
+
+    %# uid ユーザー名 iconのチェック 変更確認
+    if ( typeof(localStorage.uid) === "undefined" ){
+        var uidobj = new jsSHA("SHA3-512", "TEXT");
+        var timerec = JSON.stringify(Date.now());
+        var random = JSON.stringify(Math.random());
+            uidobj.update(timerec);
+            uidobj.update(random);
+            uidobj.update("sitedata");
+            localStorage.uid = uidobj.getHash("HEX"); //初期設定
+    }
+
+    if ( typeof(localStorage.user) === "undefined" ) {
+       localStorage.user = 'guest'; // 初期設定
+       } 
+    var uname = localStorage.user;
+
+    var user = document.getElementById('user');
+    %#user.innerHTML = "user id: " + uname;
+    user.value = uname;
+
+    if ((typeof(localStorage.icon_url) === 'undefined') || (localStorage.icon_url.match(/ciconimg/))) {
+        %# icon_urlの文字列にciconimgが含まれる場合 頭文字でアイコン
+        var char = localStorage.user.substr(0,1);
+            localStorage.icon_url = "https://<%= $url_host %>/site2/ciconimg?s=" + char ; //初期設定
+    }  
+
+    var icon = document.getElementById('uicon');
+        icon.src = localStorage.icon_url ;
+
+    %#初期化は以上
+
+  //  const endtime = performance.now();
+  //  console.log(endtime - starttime);
+} 
+
+%# wsidを登録するためにユーザー名を送信する
+function sendsession(){
+           var message = { "type" : "entry", "uid" : localStorage.uid , "user" : localStorage.user , "icon_url" : localStorage.icon_url };
+               ws.send(JSON.stringify(message));
+               console.log("message send: " + JSON.stringify(message));
+}
+
+function changeuser(){
+   %# ws利用
+   var changeuser = window.prompt("新しいユーザー名","");
+      
+       if ( typeof(changeuser) !== 'undefined')  {
+
+               localStorage.user = changeuser;
+
+               usercheck();  
+
+               // 変更を送信する
+               sendsession();
+
+       } else { 
+                   window.alert('キャンセルされました');
+       } 
+
+    return;
+}
+
+
+function upform(){
+    %# submitを利用しない
+    var form = document.getElementById("iconform");
+
+    %# 空白はリターン
+    var C = form.filename.value;
+    console.log("DEBUG: " + JSON.stringify(C) );
+    if ( C === "" ) {
+        return false;
+    }
+    var form_data = new FormData(form);
+        form_data.append("wsid" , sessionStorage.wsid );
+
+    var xhr = new XMLHttpRequest();
+
+        xhr.onload = function(e){
+
+            console.log(xhr.responseText);
+            %# レスポンスは確認のみ
+        }
+
+        xhr.open("post","https://<%= $url_host %>/site2/iconupload");
+
+        xhr.send(form_data);
+}
+
+function icon_del(){
+
+    localStorage.removeItem("icon_url");
+    usercheck();
+}
+
+function member(){
+   %# メンバーリストの更新 from は connidの登録に必要
+    var getlist = {"type":"getlist" , "pubstat" : chatRoomInfo.pubstat , "roomname" : chatRoomInfo.roomname, "from" : sessionStorage.wsid }; 
+    ws.send(JSON.stringify(getlist));
+    console.log("send getlist message");
+}
+
+function reloadmem() {
+                    // メンバーへのreload要請
+                    var relmess = { "type" : "reloadmember" ,
+                                    "roomname" : chatRoomInfo.roomname ,
+                                    "pubstat" : chatRoomInfo.pubstat 
+                                  };
+                    var resmessjson = JSON.stringify(relmess);
+                    ws.send(resmessjson); 
+
+                    console.log("DEBUG: send reloadmember message!");
+}
+
+function call(){
+    // callボタンはトグルする
+    if ( chatRoomInfo.callStat === "call" ) {
+
+        chatRoomInfo.callStat = "hangup";
+        console.log("Call start!");
+
+        sendcall();
+
+    } else if ( chatRoomInfo.callStat === "hangup" ) {
+
+        chatRoomInfo.callStat = "call";
+        console.log("hung up!");
+
+    var hangup = function(){
+            return new Promise( function(resolv,reject){            
+        var mess = { "roomname" : chatRoomInfo.roomname ,
+                     "pubstat" : chatRoomInfo.pubstat ,
+                     "type" : "detachvoice" ,
+                     "from" : sessionStorage.wsid
+                    };
+
+       var messjson = JSON.stringify(mess);
+       ws.send(messjson);
+       resolv();
+         });
+       }
+       hangup().then(function(){
+           window.location.reload();
+       });
+    }
+}
+
+
+function delMemberList(e){
+    // hungupを受けて表示用配列からwsidをキーとして削除する
+
+            //表示を消す
+            var ulobj = document.getElementById("chatroommember");
+                ulobj.removeChild(memberList.memberListObjs[e]);
+
+            delete memberList.memberListObjs[e];
+            delete memberList.rtctype[e];
+            console.log("DEBUG: delete memberList entry" + e );
+            return;
+}
+
+function gotDevices(deviceInfos) {
+      for (var i = 0; i !== deviceInfos.length; ++i) {
+            console.log("DEBUG: deviceid: " + deviceInfos[i].deviceId + " kind: " + deviceInfos[i].kind );
+      }
+      deviceIDs = deviceInfos.filter( function (e,i){
+                if ( e.kind == "videoinput" ) {
+                    return e;
+                }
+            });
+      return deviceIDs;
+}
+
+function handleError(error) {
+  console.log('navigator.getUserMedia error: ', error);
+}
+
+function getQrcodeTake(){
+    // Take Over 　の　QRcodeを表示する
+    var form_data = new FormData();
+    var encurl = encodeURI("https://<%= $url_host %>/site2/transferuser/" + localStorage.uid);
+        form_data.append("data" , encurl );
+
+    var qrobj = document.getElementById('takeoverajaxpostdata');
+
+    var xhr = new XMLHttpRequest();
+
+        xhr.onload = function(e){
+            //console.log(xhr.responseText);
+            qrobj.innerHTML = xhr.responseText;
+        }
+
+        xhr.open("post","https://<%= $url_host %>/site2/qrcode");
+        xhr.send(form_data);
+}
+
+var pos = 0; // toggle用
+function icon_rotate(){
+
+    if ( pos > 3 ) { pos = 0; } // reset
+
+    var list = [ '270' , '180' , '90' , '0' ];
+    var idx = localStorage.icon_url.indexOf('=');
+        idx = ++idx;
+    var oid = localStorage.icon_url.slice(idx);
+
+    var mess = { "type" : "iconrotate" , "oid" : oid , "oriented" : list[pos] };
+    var messjson = JSON.stringify(mess);
+    console.log("DEBUG: icon_rotate: " + messjson ); 
+
+    ws.send(messjson);
+
+    pos = ++pos;
+    return;
+}
+
+function changecam(){
+
+    if ( chatRoomInfo.callStat === 'hangup' ) {
+        console.log("DEBUG: callStat hangup becouse NOT ACTION!");
+        return;
+    }
+
+    if ( cameraSwitch == 0 ) {
+        cameraSwitch = 1;
+    console.log("clieck button change " + cameraSwitch);
+ 
+        startvoice();
+
+    } else {
+        cameraSwitch = 0;
+    console.log("clieck button change " + cameraSwitch);
+
+        startvoice();
+    }
+}
+
+
+
+
+
+
+
+/// menu list toggle
+var menuList = {};  // メニュー系トグル処理をまとめる
+
+%# 表示切り替え
+    menuList.iconUpToggle = true;  // true = none , false = block
+    menuList.iconToggle_f = function(){
+        if (menuList.iconUpToggle){
+            menuList.iconUpToggle = false;
+            document.getElementById("iconupload").style.display="block";  // 表示
+        } else {
+            menuList.iconUpToggle = true;
+            document.getElementById("iconupload").style.display="none";   // 非表示
+        }
+    }   
+
+    menuList.oChat = true;
+    menuList.oChat_f = function(){
+        if (menuList.oChat){
+            menuList.oChat = false;
+            document.getElementById("openchat").style.display="block";  // 表示
+
+                document.getElementById('msg').addEventListener("keydown" , function(){   
+                    if ((event.keyCode === 13) && (document.getElementById('msg').value )) {
+                        var mess = {"type" : "openchat" ,
+                                    "text": document.getElementById('msg').value ,
+                                    "user" : localStorage.user ,
+                                    "icon_url" : localStorage.icon_url
+                                    };
+                        var messjson = JSON.stringify(mess);
+                        ws.send(messjson);
+                        document.getElementById('msg').value = "";
+                    }
+                });
+
+        } else {
+            menuList.oChat = true;
+            document.getElementById("openchat").style.display="none";   // 非表示
+        }
+    }
+
+    menuList.croomListToggle = true;  // true = none , false = block
+    menuList.croomList_f = function(){
+        if (menuList.croomListToggle){
+            menuList.croomListToggle = false;
+            document.getElementById("chatroomlist").style.display="block";  // 表示
+
+            var $mess = { "type" : "getlistchatroom" };
+            ws.send(JSON.stringify($mess));
+
+        } else {
+            menuList.croomListToggle = true;
+            document.getElementById("chatroomlist").style.display="none";   // 非表示
+
+            if (typeof(elobj.aobj) === 'undefined' ){
+                return;
+            } else {
+                var roomdiv = document.getElementById("roomlistout");
+                    for ( var key in elobj.aobj ){
+                        roomdiv.removeChild(elobj.aobj[key]);
+                        console.log("DEBUG: remove: " + key );
+                    }
+            }
+        }
+    }   
+
+    menuList.makeChatRoomToggle = true;  // true = none , false = block
+    menuList.makeChatRoom_f = function(){
+        if (menuList.makeChatRoomToggle){
+            menuList.makeChatRoomToggle = false;
+            document.getElementById("makechatroom").style.display="block";  // 表示
+
+                document.getElementById('roomname').addEventListener("keydown" , function(){ 
+
+                    if ((event.keyCode === 13) && (document.getElementById('roomname').value )) {
+
+                        var element = document.getElementById('pubpri');
+                        var radioNodeList = element.pubstat;
+                            chatRoomInfo.pubstat = radioNodeList.value;
+                            chatRoomInfo.roomname = document.getElementById('roomname').value;
+
+                        var mess = {"type" : "makechatroom" , 
+                                    "roomname": chatRoomInfo.roomname ,
+                                    "user" : localStorage.user ,
+                                    "icon_url" : localStorage.icon_url ,
+                                    "wsid" : sessionStorage.wsid ,
+                                    "pubstat" : chatRoomInfo.pubstat 
+                                   };
+                        var messjson = JSON.stringify(mess);
+                        ws.send(messjson);
+                        document.getElementById('roomname').value = "";
+                        document.getElementById('roomdisplay').innerHTML = chatRoomInfo.roomname ;
+
+                    member();
+                    reloadmem();
+
+                    } // keydown
+                });
+
+         // chatroom char chat 重複あり
+                document.getElementById('cchat').addEventListener("keydown" , function(){   
+                    if ((event.keyCode === 13) && (document.getElementById('cchat').value )) {
+                        var mess = {"type" : "chatroomchat" ,
+                                    "text": document.getElementById('cchat').value ,
+                                    "user" : localStorage.user ,
+                                    "icon_url" : localStorage.icon_url,
+                                    "roomname" : chatRoomInfo.roomname ,
+                                    "pubstat" : chatRoomInfo.pubstat
+                                    };
+                        var messjson = JSON.stringify(mess);
+                        ws.send(messjson);
+                        document.getElementById('cchat').value = "";
+                        console.log("DEBUG: send chatroomchat");
+                    }
+                });
+
+
+        } else {
+            menuList.makeChatRoomToggle = true;
+            document.getElementById("makechatroom").style.display="none";   // 非表示
+        }
+    }   
+
+    menuList.accTakeOver = true;  // true = none , false = block
+    menuList.accTakeOver_f = function(){
+        if (menuList.accTakeOver){
+            menuList.accTakeOver = false;
+            getQrcodeTake();
+            document.getElementById("acctakeover").style.display="block";  // 表示
+        } else {
+            menuList.accTakeOver = true;
+            document.getElementById("acctakeover").style.display="none";   // 非表示
+        }
+    }   
+
+function testws(){
+
+    ws.close();
+}
+
+// main
+
+window.onload = function(){
+
+    //usercheck(); // usercheckにwsを組み込んだらエラーに成る。
+    %# カメラデバイスの検出:
+    navigator.mediaDevices.enumerateDevices().then(gotDevices).catch(handleError);
+}
+
+</script>
+User Infomation.<br>
+<div> 
+    icon: <a onclick="menuList.iconToggle_f();"><img id='uicon'></img></a>
+    user name: <input type='button' id='user' onclick="changeuser()" >
+    <button style="color: #00ff00;" onclick="menuList.accTakeOver_f();">account Take Over</button>
+    <div>
+        <details>
+            <summary>Menu....</summary>
+    <ul>
+        <li><button style="color: #00ff00;" onclick="menuList.oChat_f();">open chat</button></li>
+        <li><button style="color: #00ff00;" onclick="menuList.croomList_f();">chat room List</button></li>
+        <li><button style="color: #00ff00;" onclick="menuList.makeChatRoom_f();">WebRTC room start</button></li>
+    </ul>
+        </details>
+    </div>
+</div>
+
+%# iconupload block default dipslay: none
+<div id='iconupload' style="display: none;"> 
+    <form method="post" id="iconform" action="/iconupload" enctype="multipart/form-data" style="display: inline;">
+       <input type="file" accept="*/*;capture=camera" name="filename" id="upfile" onchange=""> 
+       <input type="button" value="upload" onclick="upform();">
+    </form>
+    <input type="button" value="pic icon delete" onclick="icon_del();" style="display: inline;">
+    <input type="button" value="icon Rotate choice" onclick="icon_rotate();">
+</div>
+
+<div id='openchat' style="display: none;">
+    <div><h3>Open Chat<h3></div>
+    <p><input type="text" id="msg" placeholder="message..."></p>
+    <ul id="openchatout"></ul>
+</div>
+
+<div id="chatroomlist" style="display: none;">
+    Public Chat Room List
+    <div><p id="roomlistout"></p></div>
+</div>
+
+<div id="makechatroom" style="display: none;">
+    Chat Room 
+    <form id="pubpri">
+        <input type="radio" name="pubstat" value="public" checked>Public Chatroom</label>
+        <input type="radio" name="pubstat" value="private" >Private Chatroom</label>
+    </form>
+    <div id="chatroomleft">
+        <p id='roomdisplay'></p>
+        <input type="text" id="roomname" placeholder="room...">
+        <ul id="chatroommember" class='chatmem'></ul>
+    </div>
+    <div id="chatroomright">
+        <input type="text" id="cchat" placeholder="message...">
+        <ul id='chatroomout'></ul></p>
+    </div>
+</div>
+<div id="acctakeover" style="display: none;">
+QRcodeをスナップショットで保存してください。
+アカウントを移動したいブラウザで開くことでアカウントを移動します。
+<div id='takeoverajaxpostdata' ></div>
+</div>
+

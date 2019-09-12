@@ -1,0 +1,55 @@
+% layout 'default';
+% title 'User Info Transfer';
+
+<script>
+
+function cansel(){
+
+    window.location.replace("https://<%= $url_host %>/site2/"); // site2 topへ
+
+}
+
+function entry(){
+
+    var uid = "<%= $uid %>"; 
+    var user = "<%= $user %>";
+    var icon_url = "<%= $icon_url %>";
+
+    // uidは新設する
+    var uidobj = new jsSHA("SHA3-512", "TEXT");
+    var timerec = JSON.stringify(Date.now());
+    var random = JSON.stringify(Math.random());
+        uidobj.update(timerec);
+        uidobj.update(random);
+        uidobj.update("sitedata");
+        localStorage.uid = uidobj.getHash("HEX"); //初期設
+
+        localStorage.user = user;
+        localStorage.icon_url = icon_url;
+    // topページでcheckuserが実施されるまで反映されない
+
+    // 旧uidを廃止登録する
+    var form_data = new FormData();
+        form_data.append('olduid', uid);
+
+    var xhr = new XMLHttpRequest();
+
+        xhr.onload = function(e){
+             console.log(xhr.responseText);
+             window.location.replace("https://<%= $url_host %>/site2/"); // site2 topへ
+             }
+        xhr.open('post', "https://<%= $url_host %>/site2/obsoleteuid");
+
+        xhr.send(form_data);
+}
+
+</script>
+
+<div>
+    <div>Icon: <img src="<%= $icon_url %>"</div><br>
+    User name: <%= $user %><br>
+    この画面を表示中のブラウザに、上記アカウント情報を移動します。<br>
+    情報は上書きされるので、登録済みのアカウントは消滅します<br>
+    <input type='button' name='trans' onclick="entry();" value="Yes">
+    <input type='button' name='trans' onclick="cansel();" value="Cansel">
+</div>

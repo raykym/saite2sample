@@ -1,0 +1,35 @@
+% layout 'default';
+% title 'imgchk';
+
+<script>
+
+window.onload = function(){
+    document.getElementById('idnum').addEventListener("keydown", function(){
+        if ((event.keyCode === 13) && ( document.getElementById('idnum').value)){
+
+    var id = document.getElementById('idnum').value;
+    var orient = document.getElementById('orinum').value;
+    console.log("DEBUG: " + orient );
+
+            var divobj = document.getElementById('imgout');
+            if ( orient === ''){
+                divobj.setAttribute('width', '100%');
+                divobj.setAttribute('hight', '100%');
+                divobj.src = "https://<%= $url_host %>/site2/imgout?id=" + id;
+            } else {
+                divobj.setAttribute('width', '');
+                divobj.setAttribute('hight', '');
+                divobj.src = "https://<%= $url_host %>/site2/imgout?id=" + id + "&orient=" + orient;
+            }
+
+     } //keycode
+    });
+}
+
+</script>
+
+Input id. and orient
+<input type='text' id='idnum'>
+<input type='text' id='orinum'> (90,180,270)
+
+<img id='imgout' width='100%' hight='100%'></img>
