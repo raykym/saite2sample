@@ -669,6 +669,10 @@ function call(){
     if ( chatRoomInfo.callStat === "call" ) {
 
         chatRoomInfo.callStat = "hangup";
+
+        var btnobj = document.getElementById('btn' + sessionStorage.wsid);
+            btnobj.innerHTML = "<img src=" + localStorage.icon_url + " > [" + localStorage.user + "] " + chatRoomInfo.callStat;
+
         console.log("Call start!");
 
         sendcall();
@@ -676,6 +680,9 @@ function call(){
     } else if ( chatRoomInfo.callStat === "hangup" ) {
 
         chatRoomInfo.callStat = "call";
+        var btnobj = document.getElementById('btn' + sessionStorage.wsid);
+            btnobj.innerHTML = "<img src=" + localStorage.icon_url + " > [" + localStorage.user + "] " + chatRoomInfo.callStat;
+
         console.log("hung up!");
 
     var hangup = function(){

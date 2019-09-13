@@ -173,8 +173,8 @@ sub imgout {
         my $bimage = GD::Image->newFromJpegData($res->{data});
 
         my @bound = $bimage->getBounds();
-        my $wx = 50 / $bound[0];
-        my $hx = 50 / $bound[1];
+        my $wx = 350 / $bound[0];
+        my $hx = 350 / $bound[1];
 
         my $w = int($bound[0] * $wx);
         my $h = int($bound[1] * $hx);
@@ -191,8 +191,8 @@ sub imgout {
 	   
            $image->copyResized($bimage, 0, 0, 0, 0, $w, $h, $bound[0], $bound[1]);
 
-        my $iimage = new GD::Image(50,50);
-           $iimage->copyRotated($image,25,25,0,0,50,50,$orient);
+        my $iimage = new GD::Image(350,350);
+           $iimage->copyRotated($image,175,175,0,0,350,350,$orient);
 
         $self->render(data => $iimage->jpeg , format => $params->{mime} );
 
