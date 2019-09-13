@@ -99,6 +99,11 @@ function wsCall(){
                }
 
                if ( evt.type === "openchat" ){
+
+                  var str = evt.text;
+                      evt.text = str.replace(/<("[^"]*"|'[^']*'|[^'">])*>/g, "");  // tag delete
+                      console.log("DEBUG: evt.text: " + evt.text);
+
                   var liobj = document.createElement("li");
                       liobj.setAttribute("id" , "openchatout");
                       liobj.innerHTML = "<img src=" + evt.icon_url + " > [" + evt.user + "] " + evt.text ;
@@ -117,7 +122,7 @@ function wsCall(){
                    if (roomlist.length === 0 ){ 
 
                        elobj.aobj.push(document.createElement("p"));
-                       elobj.aobj[0].innerHTML = "<H1> None chat room... <H1>";
+                       elobj.aobj[0].innerHTML = "<H1> None of chat room... <H1>";
                        var roomdiv = document.getElementById("roomlistout");
                            roomdiv.appendChild(elobj.aobj[0]); // 固定
 
@@ -937,25 +942,30 @@ window.onload = function(){
 }
 
 </script>
+
+<headder>
+</headder>
 User Infomation.<br>
 <div> 
     icon: <a onclick="menuList.iconToggle_f();"><img id='uicon'></img></a>
     user name: <input type='button' id='user' onclick="changeuser()" >
     <button style="color: #00ff00;" onclick="menuList.accTakeOver_f();">account Take Over</button>
-    <div>
-        <details>
-            <summary>Menu....</summary>
-    <ul>
-        <li><button style="color: #00ff00;" onclick="menuList.oChat_f();">open chat</button></li>
-        <li><button style="color: #00ff00;" onclick="menuList.croomList_f();">chat room List</button></li>
-        <li><button style="color: #00ff00;" onclick="menuList.makeChatRoom_f();">WebRTC room start</button></li>
-    </ul>
-        </details>
-    </div>
+</div>
+
+<div>
+    <details>
+        <summary>Menu....</summary>
+        <ul>
+            <li><button style="color: #00ff00;" onclick="menuList.oChat_f();">open chat</button></li>
+            <li><button style="color: #00ff00;" onclick="menuList.croomList_f();">chat room List</button></li>
+            <li><button style="color: #00ff00;" onclick="menuList.makeChatRoom_f();">WebRTC room start</button></li>
+        </ul>
+    </details>
 </div>
 
 %# iconupload block default dipslay: none
 <div id='iconupload' style="display: none;"> 
+Icon upload...(JPEG only)<br>
     <form method="post" id="iconform" action="/iconupload" enctype="multipart/form-data" style="display: inline;">
        <input type="file" accept="*/*;capture=camera" name="filename" id="upfile" onchange=""> 
        <input type="button" value="upload" onclick="upform();">
@@ -991,9 +1001,15 @@ User Infomation.<br>
         <ul id='chatroomout'></ul></p>
     </div>
 </div>
+
 <div id="acctakeover" style="display: none;">
 QRcodeをスナップショットで保存してください。
 アカウントを移動したいブラウザで開くことでアカウントを移動します。
 <div id='takeoverajaxpostdata' ></div>
 </div>
 
+<footer>
+<h6>
+    <52through+backbone at gmail.com>
+</h6>
+</footer>
