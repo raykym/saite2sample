@@ -19,7 +19,7 @@ function loopstart(){
                 fn;
                 timerarray.push(fn);  // 再度戻す
             console.log("DEBUG: timearray: " + timerarray.length );
-        },10000); // 10sec
+        },5000); // 5sec
 }
 
     var socket_wait = null;
@@ -41,6 +41,8 @@ function loopstart(){
         memberList.memberList_diff = new Array;
         memberList.rtctype = new Object;
 
+    var tagtext = new Object;   //file投稿用タグデータ
+
     wsCall();  // 起動先行
 
 function wsCall(){
@@ -52,7 +54,7 @@ function wsCall(){
 
     ws.onopen = function(){
         console.log('Connection opened');
-
+if (false){  // serverからに変更
         socket_wait = setInterval(function (){
            var dummsg = {"dummy":"dummy"};
            ws.send(JSON.stringify(dummsg));
@@ -60,6 +62,7 @@ function wsCall(){
             }, 50000)
 
         timerarray.push(socket_wait);
+} // block
         usercheck(); // window.onloadから移転	
         sendsession();
 
@@ -280,8 +283,11 @@ function wsCall(){
                // chatroom char chat 別の場所に重複あり
                     document.getElementById('cchat').addEventListener("keydown" , function(){   
                         if ((event.keyCode === 13) && (document.getElementById('cchat').value )) {
+
+                        var messtext = document.getElementById('cchat').value.replace(/<("[^"]*"|'[^']*'|[^'">])*>/g, "");  // tag delete
+
                             var mess = {"type" : "chatroomchat" ,
-                                        "text": document.getElementById('cchat').value ,
+                                        "text": messtext ,
                                         "user" : localStorage.user ,
                                         "icon_url" : localStorage.icon_url,
                                         "roomname" : chatRoomInfo.roomname ,
@@ -384,7 +390,34 @@ function wsCall(){
                return;
            }
 
+           if ( evt.type === 'filenotice' ){
+               console.log("DEBUG: recieve: filenotice");
 
+               var divobj = document.getElementById('picchat-img');
+
+               console.log("DEBUG: evt.mime: " + evt.mime );
+               %# .indexOfで不一致-1,一致　0なので、 ~で反転すると、不一致0　一致-1で不一致はパスするように成る false 0でtrue その他になる
+               if ( ~evt.mime.indexOf('jpg') || ~evt.mime.indexOf('jpeg') || ~evt.mime.indexOf('png') || ~evt.mime.indexOf('gif') ){
+               %# 画像
+                       tagtext.oid = evt.oid;
+                       tagtext.tag = "<img width='350' higth='350' src=https://<%= $url_host %>/fileout?oid=" + tagtext.oid + "></img>";
+                       divobj.innerHTML = tagtext.tag;
+
+               } else if ( ~evt.mime.indexOf('mpeg') || ~evt.mime.indexOf('3gp') || ~evt.mime.indexOf('mp4') || ~evt.mime.indexOf('m4a') || ~evt.mime.indexOf('mpg') || ~evt.mime.indexOf('mp3') || ~evt.mime.indexOf('octet-stream') ){
+               %# 動画
+                       tagtext.oid = evt.oid;
+                       tagtext.tag = "<video width='350' hight='350' controls src=https://<%= $url_host %>/fileout?oid=" + tagtext.oid +"></video>";
+                       divobj.innerHTML = tagtext.tag;
+
+               } else if ( ~evt.mime.indexOf('pdf')) {
+               %# pdf
+                      tagtext.oid = evt.oid;
+                      tagtext.tag = "<object type='application/pdf' data=https://<%= $url_host %>/fileout?oid=" + tagtext.oid + "></object>";
+                      divobj.innerHTML = tagtext.tag;
+               }
+
+               return;
+           }
 
 
                return;
@@ -428,7 +461,7 @@ function wsCall(){
 
                            memberList.rtctype[evt.from] = document.createElement(evt.resrtctype); // audio or video
                            memberList.rtctype[evt.from].setAttribute('id' , "stream" + evt.from );
-                           memberList.rtctype[evt.from].setAttribute('autoplay' , 'autoplay');
+                         //  memberList.rtctype[evt.from].setAttribute('autoplay' , 'autoplay');
                            memberList.rtctype[evt.from].setAttribute('controls', 'controls');
 
                            elm.appendChild(memberList.rtctype[evt.from]); 
@@ -460,7 +493,7 @@ function wsCall(){
 
                            memberList.rtctype[evt.from] = document.createElement(evt.resrtctype); // audio or video
                            memberList.rtctype[evt.from].setAttribute('id' , "stream" + evt.from );
-                           memberList.rtctype[evt.from].setAttribute('autoplay' , 'autoplay');
+                        //   memberList.rtctype[evt.from].setAttribute('autoplay' , 'autoplay');
                            memberList.rtctype[evt.from].setAttribute('controls', 'controls');
 
                            elm.appendChild(memberList.rtctype[evt.from]); 
@@ -641,6 +674,16 @@ function upform(){
 
 function icon_del(){
 
+    var idx = localStorage.icon_url.indexOf('=');
+        idx = ++idx;
+    var oid = localStorage.icon_url.slice(idx);
+
+    var mess = { "type" : "icondel" ,
+                 "oid" : oid ,
+               };
+    var messjson = JSON.stringify(mess);
+    ws.send(messjson);
+
     localStorage.removeItem("icon_url");
     usercheck();
 }
@@ -794,6 +837,64 @@ function changecam(){
     }
 }
 
+function upfile(){
+    %# submitを利用しない
+    var form = document.getElementById("fileform");
+
+    %# 空白はリターン
+    var C = form.filename.value;
+    console.log("DEBUG: " + JSON.stringify(C) );
+    if ( C === "" ) {
+        return false;
+    }
+    var form_data = new FormData(form);
+        form_data.append("wsid" , sessionStorage.wsid );
+        form_data.append("roomname" , chatRoomInfo.roomname );
+        form_data.append("pubstat" , chatRoomInfo.pubstat );
+
+    var xhr = new XMLHttpRequest();
+
+        xhr.onload = function(e){
+
+            console.log(xhr.responseText);
+            %# レスポンスは確認のみ
+        }
+
+        xhr.open("post","https://<%= $url_host %>/fileupload");
+
+        xhr.send(form_data);
+}
+
+function postpic(){
+
+    var mess = {"type" : "chatroomchat" ,
+                "text": tagtext.tag ,
+                "user" : localStorage.user ,
+                "icon_url" : localStorage.icon_url,
+                "roomname" : chatRoomInfo.roomname ,
+                "pubstat" : chatRoomInfo.pubstat
+                };
+    var messjson = JSON.stringify(mess);
+    ws.send(messjson);
+    tagtext = new Object;
+    menuList.picchat_f(); //閉じる
+}
+
+function picture_rotate(){
+%# posはiconと共用
+    if ( pos > 3 ) { pos = 0; } // reset
+
+    var list = [ '270' , '180' , '90' , '0' ];
+    var oid = tagtext.oid;
+
+    var divobj = document.getElementById('picchat-img');
+        tagtext.tag = "<img width='350' higth='350' src=https://<%= $url_host %>/fileout?oid=" + tagtext.oid + "&oriented=" + list[pos] + "></img>";
+        divobj.innerHTML = tagtext.tag;
+
+    pos = ++pos;
+    return;
+
+}
 
 
 
@@ -901,8 +1002,11 @@ var menuList = {};  // メニュー系トグル処理をまとめる
          // chatroom char chat 重複あり
                 document.getElementById('cchat').addEventListener("keydown" , function(){   
                     if ((event.keyCode === 13) && (document.getElementById('cchat').value )) {
+
+                        var messtext = document.getElementById('cchat').value.replace(/<("[^"]*"|'[^']*'|[^'">])*>/g, "");  // tag delete
+
                         var mess = {"type" : "chatroomchat" ,
-                                    "text": document.getElementById('cchat').value ,
+                                    "text": messtext ,
                                     "user" : localStorage.user ,
                                     "icon_url" : localStorage.icon_url,
                                     "roomname" : chatRoomInfo.roomname ,
@@ -934,6 +1038,18 @@ var menuList = {};  // メニュー系トグル処理をまとめる
         }
     }   
 
+    menuList.picchat = true;  // true = none , false = block  cchatのサブ画面
+    menuList.picchat_f = function(){
+        if (menuList.picchat){
+            menuList.picchat = false;
+            document.getElementById("picchat").style.display="block";  // 表示
+        } else {
+            menuList.picchat = true;
+            document.getElementById("picchat").style.display="none";   // 非表示
+            document.getElementById('picchat-img').innerHTML = "";
+        }
+    }   
+
 function testws(){
 
     ws.close();
@@ -951,6 +1067,7 @@ window.onload = function(){
 </script>
 
 <headder>
+testing with google chrome <br>
 </headder>
 User Infomation.<br>
 <div> 
@@ -1005,6 +1122,18 @@ Icon upload...(JPEG only)<br>
     </div>
     <div id="chatroomright">
         <input type="text" id="cchat" placeholder="message...">
+        <input type="button" value="file" onclick="menuList.picchat_f();" style="display: inline;">
+                                         %# 2段階で画面が開く
+            <div id='picchat' style='display: none;'> 
+                <div id='picchat-img'></div>
+                file upload...<br>
+                <form method="post" id="fileform" action="/fileupload" enctype="multipart/form-data" style="display: inline;">
+                    <input type="file" accept="*/*;capture=camera" name="filename" id="fileup" onchange=""> 
+                    <input type="button" value="upload&check" onclick="upfile();">
+                </form>
+                <input type="button" value="picture Rotate choice" onclick="picture_rotate();">
+                <input type="button" value="post pic" onclick="postpic();">
+            </div>
         <ul id='chatroomout'></ul></p>
     </div>
 </div>
@@ -1014,6 +1143,7 @@ QRcodeをスナップショットで保存してください。
 アカウントを移動したいブラウザで開くことでアカウントを移動します。
 <div id='takeoverajaxpostdata' ></div>
 </div>
+
 
 <footer>
 <h6>

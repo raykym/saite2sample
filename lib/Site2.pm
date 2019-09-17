@@ -50,12 +50,13 @@ sub startup {
   # Normal route to controller
 #  $r->get('/')->to('example#welcome');
   $r->get('/')->to('top#top');
+  $r->post('/qrcode')->to('top#qrcode');
 
   $r->get('/ciconimg')->to('filestore#cicon');
   $r->post('/iconupload')->to('filestore#iconupload');
   $r->get('/geticon')->to('filestore#geticon');
-
-  $r->post('/qrcode')->to('top#qrcode');
+  $r->post('/fileupload')->to('filestore#fileupload');
+  $r->get('/fileout')->to('filestore#fileout');
 
   $r->get('/transferuser/:uid')->to('transferuser#accept');
   $r->post('/obsoleteuid')->to('transferuser#uidobsolete');

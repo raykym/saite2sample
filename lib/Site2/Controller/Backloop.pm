@@ -26,8 +26,18 @@ sub signaling {
        undef $wsidjson;
 
     # WebSocket接続維持設定
-       $stream_io->{$wsid} = Mojo::IOLoop->stream($self->tx->connection);
-       $stream_io->{$wsid}->timeout(10);   # 10sec timeout 常時接続なのですぐに切れる
+    #  $stream_io->{$wsid} = Mojo::IOLoop->stream($self->tx->connection);
+    #   $stream_io->{$wsid}->timeout(10);   # 10sec timeout 常時接続なのですぐに切れる
+       $stream_io->{$wsid} = Mojo::IOLoop->recurring( 50 => sub {
+           my $loop = shift;
+	   # if ($self->inactivity_timeout < 50000 ){
+		  my $mess = { "dummy" => "dummy" };
+		  my $messjson = to_json($mess);
+                  $clients->{$wsid}->send($messjson);
+		  $self->app->log->debug("DEBUG: send socket wait!!");
+           #  }
+	       });
+
           $self->inactivity_timeout(60000); #60sec   50secでdummyが送信され
 
     # pubsub listen
@@ -281,6 +291,14 @@ sub signaling {
                              return;
 			 }
 
+			 if ($jsonobj->{type} eq "icondel" ){
+
+			    $self->app->pg->db->delete('icondata', { "oid" => $jsonobj->{oid} } );
+
+			    $self->app->log->info("DEBUG: delete icon data $jsonobj->{oid}");
+                            return;
+			 }
+
 
 			 
 
@@ -313,6 +331,8 @@ sub signaling {
          $self->on(finish => sub{
                my ($self, $code,$reson) = @_;
 
+	           $self->app->log->info("finish connection $wsid");
+
 	           $self->app->pg->pubsub->unlisten($wsid => $pubsub_cb->{$wsid});
 	           $self->app->pg->pubsub->unlisten("openchat" => $cb);
 
@@ -332,7 +352,7 @@ sub signaling {
 		   #    $self->app->log->info("DEBUG: into websocket finish!!!");
 
              delete $clients->{$wsid};
-             delete $stream_io->{$wsid};
+	     Mojo::IOLoop->remove($stream_io->{$wsid});
 
        }); # on finish
 

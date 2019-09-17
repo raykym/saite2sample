@@ -24,6 +24,16 @@
 	   .memlist {
                display: inline-block;
 	   }
+
+	   # 未使用 overrayの確認
+	   .picchat-overray {
+               display: none;
+	       position: fixed;
+	       top: 0;
+	       left: 0;
+	       width: 100%;
+               height: 100%;
+	   }
 	     
        </style>
   <script type="text/javascript" src="https://westwind.backbone.site/js/jstz.main.js"></script>

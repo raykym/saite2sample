@@ -138,6 +138,127 @@ sub geticon {
 }
 
 
+sub fileupload {
+    my $self = shift;
+
+       my $wsid = $self->param('wsid');
+       my $roomname = $self->param('roomname');
+       my $pubstat = $self->param('pubstat');
+       my $fileobj = $self->req->upload('filename');
+       my $filename = $fileobj->filename;
+       my $data = $fileobj->asset->slurp;
+       my $mimetype = $fileobj->headers->content_type; 
+
+       my $oid = Sessionid->new($wsid)->uid;
+       my $checkdate = DateTime->now();
+
+       my $params = { "filename" => $filename , "mime" => $mimetype , "checkdate" => $checkdate , "room" => "$pubstat$roomname" };
+       my $paramjson = to_json($params);
+
+           {
+                 use DBD::Pg qw(:pg_types);
+                 my $tx = $self->app->pg->db->begin;
+                 my $sth_uploadfile = $self->app->pg->db->dbh->prepare($self->app->config->{sql_icondata_insert});
+                    $sth_uploadfile->bind_param(3, $data,{ pg_type => DBD::Pg::PG_BYTEA });
+                    $sth_uploadfile->execute($oid,$paramjson,$data);
+
+                    $tx->commit;
+                  undef $tx;
+		  undef $sth_uploadfile;
+           }
+
+         my $message = { "type" => "filenotice" , "sendto" => $wsid , "oid" => $oid , "mime" => $mimetype };
+         my $jsontxt = to_json($message);
+
+            $self->app->pg->pubsub->notify( $wsid => $jsontxt );
+
+            # レスポンスは利用しないが、ブラウザでエラーにならないように応答を返す
+	    $self->render( json => $message , status => '200' );
+
+       undef $fileobj;
+       undef $filename;
+       undef $data;
+       undef $checkdate;
+       undef $params;
+       undef $paramjson;
+
+}
+
+sub fileout {
+    my $self = shift;
+
+    use Mojolicious::Types;
+    my $types = Mojolicious::Types->new;
+
+    my $oid = $self->param('oid');
+    my $oriented = $self->param('oriented');  # 0,90,180,270
+
+    my $field = [ "params" , "data" ];
+    my $where = { "oid" => $oid };
+    my $sth_icon = $self->app->pg->db->select("icondata", $field , $where );
+    my $res = $sth_icon->hash;
+    my $params = $res->{params};
+       $params = from_json($params);
+
+    if ($params->{mime} =~ /jpg|jpeg|png|gif/ ){
+
+        my $bimage;
+        if ( $params->{mime} =~ /jpg|jpeg/ ){
+             $bimage = GD::Image->newFromJpegData($res->{data});
+	} elsif ( $params->{mime} =~ /png/ ){
+             $bimage = GD::Image->newFromPngData($res->{data});
+	} elsif ( $params->{mime} =~ /gif/ ){
+             $bimage = GD::Image->newFromGifData($res->{data});
+	}
+
+            my @bound = $bimage->getBounds();
+            my $wx = 350 / $bound[0];
+            my $hx = 350 / $bound[1];
+
+            my $w = int($bound[0] * $wx);
+            my $h = int($bound[1] * $hx);
+
+	    my $w_c = int($bound[0] / 2); # 中心点
+	    my $h_c = int($bound[1] / 2);
+
+	    my $image;
+
+	       $image = new GD::Image($w,$h); 
+	   
+               $image->copyResized($bimage, 0, 0, 0, 0, $w, $h, $bound[0], $bound[1]);
+
+            my $iimage = new GD::Image(350,350);
+               $iimage->copyRotated($image,175,175,0,0,350,350,$oriented);
+
+	if ( $params->{mime} =~ /jpeg|jpg/ ){
+            $self->render(data => $iimage->jpeg , format => $params->{mime} );
+        } elsif ( $params->{mime} =~ /png/ ){
+            $self->render(data => $iimage->png , format => $params->{mime} );
+	} elsif ( $params->{mime} =~ /gif/ ){
+            $self->render(data => $iimage->gif , format => $params->{mime} );
+	}
+
+	undef $bimage;
+	undef $image;
+	undef $iimage;
+
+	#   my $extention = $types->detect($params->{mime});
+	#   $self->render(data => $res->{data},format => $extention);
+
+    } elsif ( $params->{mime} =~ /mpeg|mpg|3gp|mp4|m4a|realtext|mp3|octet-stream/){
+
+        my $extention = $types->detect($params->{mime});
+
+           $self->render(data => $res->{data},format => $extention);
+
+    } elsif ( $params->{mime} =~ /pdf/ ){
+
+        my $extention = $types->detect($params->{mime});
+
+           $self->render(data => $res->{data},format => $extention);
+    }
+
+}
 
 
 
