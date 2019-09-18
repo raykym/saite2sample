@@ -26,10 +26,44 @@ window.onload = function(){
     });
 }
 
+function upfile_f(){
+    %# submitを利用しない
+    var form = document.getElementById("fileform");
+
+    %# 空白はリターン
+    var C = form.filename.value;
+    console.log("DEBUG: " + JSON.stringify(C) );
+    if ( C === "" ) {
+        return false;
+    }
+    var form_data = new FormData(form);
+        form_data.append("option" , "{ 'categoly':'common' , " + document.getElementById('categolyname').value + "}" );
+        form_data.append("wsid" , "dummywsid" );
+        form_data.append("roomname" , "dummyroom" );
+        form_data.append("pubstat" , "dummypubstat" );
+
+    var xhr = new XMLHttpRequest();
+
+        xhr.onload = function(e){
+
+            console.log(xhr.responseText);
+            %# レスポンスは確認のみ
+        }
+
+        xhr.open("post","https://<%= $url_host %>/fileupload");
+
+        xhr.send(form_data);
+}
+
 </script>
 
 Input id. and orient
 <input type='text' id='idnum'>
 <input type='text' id='orinum'> (90,180,270)
+    <form method="post" id="fileform" action="/fileupload" enctype="multipart/form-data" style="display: inline;">
+       <input type="file" accept="*/*;capture=camera" name="filename" id="upfile" onchange="">
+       <input type='text' id='categolyname'> javascript key value parameter
+       <input type="button" value="upload" onclick="upfile_f();">
+    </form>
 
 <img id='imgout' width='100%' hight='100%'></img>

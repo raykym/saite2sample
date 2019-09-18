@@ -97,6 +97,7 @@ sub signaling {
 		   #下記のイベントを記録する (typeイベント)
 		   {  
 			$jsonobj->{datetime} = DateTime->now();
+		        $jsonobj->{ttl} = time();
 	             my $jsontext = to_json($jsonobj);
 		     my $datasec = { "data" => $jsontext };
 		        $self->app->pg->db->insert("backloop", $datasec );
@@ -308,6 +309,7 @@ sub signaling {
 		   #下記のイベントを記録する (type以外) webRTCのorder responseは2重に登録されるかも
 		   {  
 			$jsonobj->{datetime} = DateTime->now();
+		        $jsonobj->{ttl} = time();
 	             my $jsontext = to_json($jsonobj);
 		     my $datasec = { "data" => $jsontext };
 		        $self->app->pg->db->insert("backloop", $datasec );
@@ -337,6 +339,17 @@ sub signaling {
 	           $self->app->pg->pubsub->unlisten("openchat" => $cb);
 
 		   my $res = $redis->db->keys('ENTRY*'); # すべてのchatroomをチェックする
+
+		   # picture chatを利用した場合、画像を削除する
+                   for my $key (@$res){
+                       my $info = $redis->db->hget( $key , $wsid );
+		       $self->app->log->debug("DEBUG: info: $info");
+		       if ( ! defined $info ){ next; }
+		          $info = from_json($info);
+		          $self->app->pg->db->query("delete from icondata where params->>'room' = ?" , "$info->{pubstat}$info->{room}" );
+			  $self->app->log->debug("DEBUG: delete pic $info->{pubstat} $info->{room}");
+		   }
+
 		   for my $key (@$res){
 			   #  $self->app->log->info("DEBUG: key: $key");
 		       my $fields = $redis->db->hkeys($key);  # fieldをチェックして一致したら削除する

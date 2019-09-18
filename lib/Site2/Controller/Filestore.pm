@@ -104,7 +104,15 @@ sub geticon {
     my $params = $res->{params};
        $params = from_json($params);
 
-    my $bimage = GD::Image->newFromJpegData($res->{data});
+       #  my $bimage = GD::Image->newFromJpegData($res->{data});
+        my $bimage;
+        if ( $params->{mime} =~ /jpg|jpeg/ ){
+             $bimage = GD::Image->newFromJpegData($res->{data});
+	} elsif ( $params->{mime} =~ /png/ ){
+             $bimage = GD::Image->newFromPngData($res->{data});
+	} elsif ( $params->{mime} =~ /gif/ ){
+             $bimage = GD::Image->newFromGifData($res->{data});
+	}
     my @bound = $bimage->getBounds();
 
     my $wx = 50 / $bound[0];
@@ -144,6 +152,7 @@ sub fileupload {
        my $wsid = $self->param('wsid');
        my $roomname = $self->param('roomname');
        my $pubstat = $self->param('pubstat');
+       my $option = $self->param('option');
        my $fileobj = $self->req->upload('filename');
        my $filename = $fileobj->filename;
        my $data = $fileobj->asset->slurp;
@@ -152,7 +161,7 @@ sub fileupload {
        my $oid = Sessionid->new($wsid)->uid;
        my $checkdate = DateTime->now();
 
-       my $params = { "filename" => $filename , "mime" => $mimetype , "checkdate" => $checkdate , "room" => "$pubstat$roomname" };
+       my $params = { "filename" => $filename , "mime" => $mimetype , "checkdate" => $checkdate , "room" => "$pubstat$roomname" , "option" => $option };
        my $paramjson = to_json($params);
 
            {
@@ -212,14 +221,12 @@ sub fileout {
 	}
 
             my @bound = $bimage->getBounds();
-            my $wx = 350 / $bound[0];
-            my $hx = 350 / $bound[1];
+	    # 1/2に縮小
+            my $w = int($bound[0] / 2);
+            my $h = int($bound[1] / 2);
 
-            my $w = int($bound[0] * $wx);
-            my $h = int($bound[1] * $hx);
-
-	    my $w_c = int($bound[0] / 2); # 中心点
-	    my $h_c = int($bound[1] / 2);
+	    my $w_c = int($w / 2); # 中心点
+	    my $h_c = int($h / 2);
 
 	    my $image;
 
@@ -227,8 +234,8 @@ sub fileout {
 	   
                $image->copyResized($bimage, 0, 0, 0, 0, $w, $h, $bound[0], $bound[1]);
 
-            my $iimage = new GD::Image(350,350);
-               $iimage->copyRotated($image,175,175,0,0,350,350,$oriented);
+            my $iimage = new GD::Image($w,$h);
+               $iimage->copyRotated($image,$w_c,$h_c,0,0,$w,$h,$oriented);
 
 	if ( $params->{mime} =~ /jpeg|jpg/ ){
             $self->render(data => $iimage->jpeg , format => $params->{mime} );
@@ -265,6 +272,7 @@ sub fileout {
 sub imgchk {
    my $self = shift;
    # 画像の縦横確認用
+   # icondataのidを指定して表示する仕組み
     
     $self->stash( url_orig => $self->url_for->to_abs );
  my $url_host = Mojo::URL->new($self->url_for->to_abs );
@@ -282,6 +290,20 @@ sub imgout {
     my $field = [ "params" , "data" ];
     my $where = { "id" => $id };
     my $res = $self->app->pg->db->select('icondata', $field , $where )->hash;
+
+    $self->app->log->info("DEBUG: res: $res->{params} ");
+
+    my $flg = 0;
+        my @keys = keys(%$res);
+        for my $i (@keys){
+            if ( $i eq 'params' ) {
+                $flg = 1;
+	    }
+        }
+    if ($flg == 0 ){
+        $self->render( text => "not found id." );
+	return;
+    }
 
     my $params = from_json($res->{params});
 

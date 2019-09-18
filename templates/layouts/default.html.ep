@@ -13,13 +13,20 @@
            *{ color:white;
             background-color:#000000;
 		    list-style-type: none;
-         }
+           }
+	   .userinfo {
+	       border-bottom-style: solid;
+	   }
+	   .menublock {
+	       border-bottom-style: solid;
+	   }
 	   button.addbutton {
                margin: 10px;
 	   }
 	   ul.chatmem li {
 	       width: 330px;
                display: inline-block;
+	       border-style: solid;
 	   }
 	   .memlist {
                display: inline-block;

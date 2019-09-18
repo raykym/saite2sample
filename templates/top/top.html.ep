@@ -25,10 +25,8 @@ function loopstart(){
     var socket_wait = null;
     var ws = null;
 
-    var startflg = null;
+    var startflg = null;  // localstreamのon/off判定
     var connid = null;
-
-    var sendcallflg = null;
 
     var elobj = {}; //createElementの格納場所  削除で利用 chatroom List用
 
@@ -96,6 +94,7 @@ if (false){  // serverからに変更
                }
 
                if ( evt.type === "oidnotice" ){
+                     icon_del(); // localStorage.icon_urlを参照して、データを削除する。
                      localStorage.icon_url = "https://<%= $url_host %>/geticon?oid=" + evt.oid;
                      usercheck(); 
                      return;
@@ -837,7 +836,7 @@ function changecam(){
     }
 }
 
-function upfile(){
+function upfile_f(){
     %# submitを利用しない
     var form = document.getElementById("fileform");
 
@@ -972,6 +971,8 @@ var menuList = {};  // メニュー系トグル処理をまとめる
             menuList.makeChatRoomToggle = false;
             document.getElementById("makechatroom").style.display="block";  // 表示
 
+            document.getElementById('roomname').focus();
+
                 document.getElementById('roomname').addEventListener("keydown" , function(){ 
 
                     if ((event.keyCode === 13) && (document.getElementById('roomname').value )) {
@@ -991,7 +992,8 @@ var menuList = {};  // メニュー系トグル処理をまとめる
                         var messjson = JSON.stringify(mess);
                         ws.send(messjson);
                         document.getElementById('roomname').value = "";
-                        document.getElementById('roomdisplay').innerHTML = chatRoomInfo.roomname ;
+                        document.getElementById('roomdisplay').innerHTML = chatRoomInfo.pubstat + " " + chatRoomInfo.roomname ;
+                        document.getElementById('cchat').focus();
 
                     member();
                     reloadmem();
@@ -1047,6 +1049,7 @@ var menuList = {};  // メニュー系トグル処理をまとめる
             menuList.picchat = true;
             document.getElementById("picchat").style.display="none";   // 非表示
             document.getElementById('picchat-img').innerHTML = "";
+            document.getElementById('fileform').filename = "";
         }
     }   
 
@@ -1069,18 +1072,18 @@ window.onload = function(){
 <headder>
 testing with google chrome <br>
 </headder>
+<div class='userinfo'> 
 User Infomation.<br>
-<div> 
     icon: <a onclick="menuList.iconToggle_f();"><img id='uicon'></img></a>
     user name: <input type='button' id='user' onclick="changeuser()" >
     <button style="color: #00ff00;" onclick="menuList.accTakeOver_f();">account Take Over</button>
 </div>
 
-<div>
+<div class='menublock'>
     <details>
         <summary>Menu....</summary>
         <ul>
-            <li><button style="color: #00ff00;" onclick="menuList.oChat_f();">open chat</button></li>
+            <li><button style="color: #00ff00;" onclick="menuList.oChat_f();">open infomation</button></li>
             <li><button style="color: #00ff00;" onclick="menuList.croomList_f();">chat room List</button></li>
             <li><button style="color: #00ff00;" onclick="menuList.makeChatRoom_f();">WebRTC room start</button></li>
         </ul>
@@ -1099,7 +1102,7 @@ Icon upload...(JPEG only)<br>
 </div>
 
 <div id='openchat' style="display: none;">
-    <div><h3>Open Chat<h3></div>
+    <div><h3>Open Infomation<h3></div>
     <p><input type="text" id="msg" placeholder="message..."></p>
     <ul id="openchatout"></ul>
 </div>
@@ -1122,14 +1125,14 @@ Icon upload...(JPEG only)<br>
     </div>
     <div id="chatroomright">
         <input type="text" id="cchat" placeholder="message...">
-        <input type="button" value="file" onclick="menuList.picchat_f();" style="display: inline;">
+        <input type="button" value="file open/close" onclick="menuList.picchat_f();" style="display: inline;">
                                          %# 2段階で画面が開く
             <div id='picchat' style='display: none;'> 
                 <div id='picchat-img'></div>
                 file upload...<br>
                 <form method="post" id="fileform" action="/fileupload" enctype="multipart/form-data" style="display: inline;">
                     <input type="file" accept="*/*;capture=camera" name="filename" id="fileup" onchange=""> 
-                    <input type="button" value="upload&check" onclick="upfile();">
+                    <input type="button" value="upload&check" onclick="upfile_f();">
                 </form>
                 <input type="button" value="picture Rotate choice" onclick="picture_rotate();">
                 <input type="button" value="post pic" onclick="postpic();">
