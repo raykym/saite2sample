@@ -10,15 +10,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"> 
   <title><%= title %></title>
        <style>
-           *{ color:white;
-            background-color:#000000;
-		    list-style-type: none;
-           }
+            body { 
+		    color:white;
+                    background-color:#000000;
+    	   	    list-style-type: none;
+              }
+            * button {
+		    color:white;
+                    background-color:#000000;
+             }   
+            * input {
+		    color:white;
+                    background-color:#000000;
+             }   
+            * ul {
+    	   	    list-style-type: none;
+            }  
 	   .userinfo {
 	       border-bottom-style: solid;
-	   }
+	    }
 	   .menublock {
 	       border-bottom-style: solid;
+    	       list-style-type: none;
 	   }
 	   button.addbutton {
                margin: 10px;
@@ -31,16 +44,14 @@
 	   .memlist {
                display: inline-block;
 	   }
-
-	   # 未使用 overrayの確認
-	   .picchat-overray {
-               display: none;
-	       position: fixed;
-	       top: 0;
-	       left: 0;
-	       width: 100%;
-               height: 100%;
+	   #gmap div {
+	      color: initial;
+              background-color: initial; 
+    	      list-style-type: initial;
 	   }
+           #iconrotate {
+              text-align: center;
+           }
 	     
        </style>
   <script type="text/javascript" src="https://westwind.backbone.site/js/jstz.main.js"></script>

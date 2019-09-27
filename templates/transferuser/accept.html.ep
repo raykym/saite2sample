@@ -22,8 +22,8 @@ function entry(){
         uidobj.update(timerec);
         uidobj.update(random);
         uidobj.update("sitedata");
-        localStorage.uid = uidobj.getHash("HEX"); //初期設
 
+        localStorage.uid = uidobj.getHash("HEX"); //初期設
         localStorage.user = user;
         localStorage.icon_url = icon_url;
     // topページでcheckuserが実施されるまで反映されない
@@ -36,6 +36,22 @@ function entry(){
 
         xhr.onload = function(e){
              console.log(xhr.responseText);
+
+             var resdata = JSON.parse(xhr.responseText);
+                 delete resdata.ttl;
+                 delete resdata.from;
+                 delete resdata.type;
+                 delete resdata.uid;
+                 delete resdata.user;
+                 delete resdata.icon_url;
+                 delete resdata.wsid;
+
+            for (var key in resdata){
+                localStorage[key] = resdata[key];
+                console.log("DEBUG: key; " + key + " valu: " + resdata[key]);
+            }
+
+
              window.location.replace("https://<%= $url_host %>/"); // site2 topへ
              }
         xhr.open('post', "https://<%= $url_host %>/obsoleteuid");

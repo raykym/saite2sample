@@ -5,6 +5,10 @@ use Mojo::JSON qw( from_json to_json );
 use Time::HiRes qw( time );
 use Mojo::Redis;
 use DateTime;
+use Math::Trig ':pi';
+
+use lib '/home/debian/perlwork/mojowork/server/site2/lib/Site2/Modules/';
+use Sessionid;
 
 my $clients = {};
 my $stream_io = {};
@@ -59,6 +63,32 @@ sub signaling {
     # redis setup
           my $redis ||= Mojo::Redis->new("redis://10.140.0.8");
 
+# サブルーチンエリア
+    sub kmlatlng {
+	    my ( $lat , $lng ) = @_;
+                           # 緯度によって変化する1km当たりの度数を返す
+                           my $R = 6378.1; #km 
+                           my $cf = cos( $lat / 180 * pi) * 2 * pi * $R; # 円周 km
+                           my $kd = $cf / 360 ;  # 1度のkm
+                           my $lng_km = 1 / $kd; # 軽度/1km
+
+                           # 緯度 一定
+                           my $cd = 2 * pi * $R;  # 円周 km
+                           my $lat_d = $cd / 360 ;  # 1度 km
+                           my $lat_km = 1 / $lat_d ; # 1km の 緯度
+
+                           #上限値、下限値判定はパス   合わせて2kmの範囲
+			   # 東経北緯の範囲のみ
+                           my $lat_max = $lat + $lat_km;
+                           my $lat_min = $lat - $lat_km;
+
+                           my $lng_max = $lng + $lng_km;
+                           my $lng_min = $lng - $lng_km;
+
+			   my @return = ( $lat_min , $lat_max , $lng_min , $lng_max ) ;
+
+			   return @return;
+   }
           
     # on message・・・・・・・
        $self->on(message => sub {
@@ -305,6 +335,137 @@ sub signaling {
 
                    # type の末尾はreternは無し  type付きのsendtoを個別送信する
 	           } # if type
+
+		   # walkworld用イベント   backloopにイベントは記録しない
+		   if ( $jsonobj->{walkworld} ){
+
+                       if ( $jsonobj->{walkworld} eq "postuserdata" ){
+
+			   $self->app->log->debug("DEBUG: walkworld userdata posted");
+                          
+			   my $udata = $jsonobj->{userdata};
+			   $udata->{ttl} = time();
+			   my $udatajson = to_json($udata);
+
+                           $self->app->pg->db->query("INSERT INTO walkworld(data) VALUES ( ? )" , $udatajson );
+
+                           $self->app->log->debug("DEBUG: udatajson: $udatajson ");
+
+			   # pointlist取得処理
+                           # 半径1km圏内のユニットを検索 (東経北緯限定)
+
+			   my ( $lat_min , $lat_max , $lng_min, $lng_max ) = &kmlatlng($udata->{loc}->{lat} , $udata->{loc}->{lng} );
+
+			   $self->app->log->debug("DEBUG: lat: $lat_min | $lat_max  lng: $lng_min | $lng_max ");
+
+		           my $res = $self->app->pg->db->query("select data from walkworld where (data->'loc'->>'lng')::numeric < $lng_max and 
+                                                           (data->'loc'->>'lng')::numeric > $lng_min and 
+                                                           (data->'loc'->>'lat')::numeric < $lat_max and 
+                                                           (data->'loc'->>'lat')::numeric > $lat_min order by id DESC")->hashes;
+		           #my $resdebug = to_json($res);
+			   #$self->app->log->info("DEBUG: res: $resdebug ");
+			   # $res = [ { 'data' => "json line" } , { 'data' => "json line" } .... ] 
+                           # 同じユーザーの重複が大量にあるので、listuidに登録済は除外する方向で重複を排除
+			   my $hashlist = ();  
+			   for my $a (@$res){
+				   #  my $adebug = to_json($a);
+				   #$self->app->log->info("DEBUG: a: $adebug");
+				   my $data = from_json($a->{data});
+
+                               my @listuid = ();
+                               for my $line (@$hashlist){    #登録済のuidをリスト (重複排除）
+			           push(@listuid, $line->{uid});
+			       }
+                               $self->app->log->debug("DEBUG: listuid: @listuid");
+
+			       my $flg = 0;
+			       for my $i (@listuid){
+				   $self->app->log->debug("DEBUG: cmp listuid: $data->{uid} | $i ");
+                                   if ( $data->{uid} eq $i ){
+                                       $flg = 1;  # uidが既存だと1
+				   }
+			       }
+
+			       $self->app->log->debug("DEBUG: flg: $flg");
+			       if ( $flg == 0 ) { # uidが存在しないと
+                                   push(@$hashlist, $data );
+			       }
+			   } # for res
+                          
+			   #my $hashdebug = to_json($hashlist);
+			   #$self->app->log->info("DEBUG: hashlist: $hashdebug");
+
+                           my $mess = { "walkworld" => "resuserdata" ,
+                                        "reslist" => $hashlist ,
+                                      };
+                           my $messjson = to_json($mess);
+
+                           $clients->{$wsid}->send($messjson);
+                           
+                           $self->app->log->debug("DEBUG: send reslist");
+
+                           undef $res;
+			   undef $hashlist;
+
+                           return;
+		       }
+
+                       if ( $jsonobj->{walkworld} eq "entryghost" ) {
+
+		          my $fields = $redis->db->hkeys('ghostaccEntry');  # リミッターを設定する
+			  my @ghostcount = @$fields;
+			  if ( $#ghostcount > 100 ) {
+                              $self->app->log->info("DEBUG: ghostacc limit over ");
+			      return;
+			  }
+
+                          my @latlng = &kmlatlng($jsonobj->{lat}, $jsonobj->{lng});
+			  my $kmlat_d = ($latlng[1] - $latlng[0]) / 2; # (max - min ) / 2
+			  my $kmlng_d = ($latlng[3] - $latlng[2]) / 2;
+			  
+                          my $g_lat = $jsonobj->{lat} + ((rand($kmlat_d)) - ($kmlat_d / 2)); # 1kmあたりを乱数で、500m分を引いて+-が出るように 
+                          my $g_lng = $jsonobj->{lng} + ((rand($kmlng_d)) - ($kmlng_d / 2));
+                          my $num = int(rand(9999999));
+                          my $name = "ghost$num";
+                          my $uid = Sessionid->new($name)->uid;
+
+                          my $ghostacc = {"name" => $name,
+                                          "icon_url" => "",
+                                          "uid" => $uid,
+                                          "run" => "",
+                                          "loc" => {"lat" => $g_lat, "lng" => $g_lng},
+                                          "status" => "",
+                                          "rundirect" => 0,
+                                          "target" => "",
+                                          "category" => "NPC",
+                                          "ttl" => "",
+                                          "place" => { "lat" => 0, "lng" => 0, "name" => ""},
+                                          "point_spn" => [],
+                                          "lifecount" => 4320,   # 6hour
+					  "hitcount" => 0,
+					  "chasecnt" => 0 ,
+                                         };
+
+                          my $ghostaccjson = to_json($ghostacc);
+
+                          $redis->db->hset("ghostaccEntry", $uid , $ghostaccjson );
+
+                          $self->app->log->info("DEBUG: ghostacc set: $name $uid ");
+
+			  undef $fields;
+			  undef @ghostcount;
+
+                           return;
+		       }
+
+
+
+
+                      # walkworldの末尾はreturnしない
+		   }  # if walkworld
+
+
+
 
 		   #下記のイベントを記録する (type以外) webRTCのorder responseは2重に登録されるかも
 		   {  

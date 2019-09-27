@@ -1,6 +1,7 @@
 % layout 'default';
 % title 'this page';
 
+<script type="text/javascript" src="https://maps.google.com/maps/api/js?key=AIzaSyBtLOrp4b2x0j71FcDb1Vn9topnZPTNtaM"></script>
 <script type="text/javascript" src="https://westwind.backbone.site/js/librtc.js"></script>
 <script type="text/javascript">
 
@@ -9,19 +10,22 @@
     var timerarray = [];
     var maintimerID = null;
 
+    var gpsSetId = null;
+
     loopstart();  // 起動先行
 
 function loopstart(){
         // timer objectを繰り返し実行する
         maintimerID = window.setInterval( function() {
+            console.log("DEBUG: timerarray: " + timerarray.length );
             if ( timerarray.length == 0 ) { return; }
             var fn = timerarray.shift();
                 fn;
                 timerarray.push(fn);  // 再度戻す
-            console.log("DEBUG: timearray: " + timerarray.length );
         },5000); // 5sec
 }
 
+    var CrosTimer = null;
     var socket_wait = null;
     var ws = null;
 
@@ -40,6 +44,39 @@ function loopstart(){
         memberList.rtctype = new Object;
 
     var tagtext = new Object;   //file投稿用タグデータ
+
+    var user_stat = {
+                       loc : { lat : '0' ,
+                               lng : '0'
+                             },
+                       name : localStorage.user,
+                       uid : localStorage.uid,
+                       status : "dummy",
+                       category : "USER",
+                       time : "",
+                       ttl : "",
+                       icon_url : localStorage.icon_url,
+                       category : "USER",
+                       rundirect : 0,
+                       hitcount : 0,
+                       damagecount : 0,
+                      };
+
+    if ( typeof(localStorage.user_stat) === 'undefined' ){
+        %#無ければ書く
+        localStorage.user_stat = JSON.stringify(user_stat);
+        // ここではまだwsが接続されていない
+    } else {
+        %# 在れば書き戻す
+        user_stat = JSON.parse(localStorage.user_stat);
+    }
+
+     var map = new Object;
+         map.ghostobjects = new Object;;
+
+     var ghostMax = 3;
+
+     var ghostlist = new Object;
 
     wsCall();  // 起動先行
 
@@ -70,6 +107,9 @@ if (false){  // serverからに変更
         console.log("WS Connection close... reconnect...");
         clearInterval(socket_wait); // 50sec dummy STOP
         alert("制御用接続が切れました。通話はリロードするまで続けられますが文字チャットなどは使えません。");
+
+        //user_statの保存
+        localStorage.user_stat = JSON.stringify(user_stat);
     };
 
     ws.onerror = function(){
@@ -90,6 +130,7 @@ if (false){  // serverからに変更
 
                if ( evt.type === "wsidnotice" ){
                      sessionStorage.wsid = evt.wsid;
+                     user_stat.wsid = sessionStorage.wsid;
                      return;
                }
 
@@ -111,7 +152,9 @@ if (false){  // serverからに変更
                       liobj.innerHTML = "<img src=" + evt.icon_url + " > [" + evt.user + "] " + evt.text ;
                   var ulobj = document.getElementById("openchat");
 
-                      ulobj.appendChild(liobj);
+                    //  ulobj.appendChild(liobj);
+                      ulobj.insertBefore(liobj,ulobj.firstChild);
+
                   return;
                }
 
@@ -317,7 +360,9 @@ if (false){  // serverからに変更
                            usercheck2();
                        } else if ( evt.res === "obsolete" ) {
                            console.log("DEBUG: obsolete...reset uid");
-                           delete localStorage.uid;
+
+                           localStorage.clear(); // 全て削除
+
                            usercheck2();
                        }
                 return;
@@ -561,10 +606,89 @@ if (false){  // serverからに変更
                return;
            } //if resrtctype 
 
+           if ( evt.walkworld === "resuserdata" ){
+
+               var reslist = evt.reslist;
+             //  console.log("DEBUG: walkworld resuserdata: " + JSON.stringify(reslist) );
+
+               ghostlist = reslist.filter( function(e,i){
+                   return  e.category !== 'USER'; 
+               });
+
+            if ( ghostlist.length < ghostMax ) {
+                // ghost出現イベント
+                var mess = { "walkworld" : "entryghost" ,
+                       "lat" : user_stat.loc.lat ,
+                       "lng" : user_stat.loc.lng
+                     }
+                var messjson = JSON.stringify(mess);
+                ws.send(messjson);
+                console.log("DEBUG: send entryghost ");
+            }
+
+          ghostlist.filter ( function(e,i){
+              if ( e.uid in map.ghostobjects) {
+                         map.ghostobjects[e.uid].setMap(null);
+              } 
+              map.ghostobjects[e.uid] = new google.maps.Marker({
+                           position: new google.maps.LatLng(e.loc.lat, e.loc.lng),
+                           map: map.mapobj,
+                           title: e.name,
+                           icon: e.icon_url,
+                      });
+         });
+
+         %# 消滅objectの判別、削除
+         for ( var key in map.ghostobjects ){
+             var flg = 0;
+             ghostlist.filter ( function(e,i){
+                 if ( e.uid === key ) {
+                     flg = 1;  // 有り
+                 }
+             });
+             if ( flg === 0 ) {
+                         map.ghostobjects[key].setMap(null);
+             }
+         }
+
+         // 未使用
+         var geo_dirdis = reslist.filter( function(e,i){
+                 // すべてのポイントの距離と方角
+                 var p_dist = geoDistance( user_stat.loc.lat, user_stat.loc.lng, e.loc.lat, e.loc.lng, 6 );
+                 var p_direc = geoDirection ( user_stat.loc.lat, user_stat.loc.lng, e.loc.lat, e.loc.lng);
+                 return { uid : e.uid, distance : p_dist, direction : Math.ceil(p_direc), category : e.category };
+         });
+
+
+         //pointCalc(user_stat.rundirect, user_stat.beta);
+
+
+           return;
+        } // resusesrdata
+
+        if ( evt.walkworld === 'hitdamage' ){
+
+            user_stat.damagecount++;
+
+            localStorage.user_stat = JSON.stringify(user_stat);
+            sendsession();
+
+            var mess = { "type" : "openchat",
+                         "text" : evt.hituser + "にやられた。。。",
+                         "user" : localStorage.user ,
+                         "icon_url" : localStorage.icon_url
+                       }; 
+
+            ws.send(JSON.stringify(mess));
+
+            return;
+        }
+
 
 
     } // on message
 
+// function eria!!!!
 
 function usercheck(){
     %# サーバー側への廃止アカウントのチェック
@@ -618,10 +742,14 @@ function usercheck2(){
 } 
 
 %# wsidを登録するためにユーザー名を送信する
+%# localStorageのバックアップを兼ねる take overで利用される
 function sendsession(){
-           var message = { "type" : "entry", "uid" : localStorage.uid , "user" : localStorage.user , "icon_url" : localStorage.icon_url };
-               ws.send(JSON.stringify(message));
-               console.log("message send: " + JSON.stringify(message));
+
+               var backuplocal = JSON.parse(JSON.stringify(localStorage));
+                   backuplocal.type = 'entry';
+
+               ws.send(JSON.stringify(backuplocal));
+               console.log("message send: " + JSON.stringify(backuplocal));
 }
 
 function changeuser(){
@@ -664,6 +792,7 @@ function upform(){
 
             console.log(xhr.responseText);
             %# レスポンスは確認のみ
+            sendsession();
         }
 
         xhr.open("post","https://<%= $url_host %>/iconupload");
@@ -685,6 +814,7 @@ function icon_del(){
 
     localStorage.removeItem("icon_url");
     usercheck();
+    sendsession();
 }
 
 function member(){
@@ -811,6 +941,8 @@ function icon_rotate(){
 
     ws.send(messjson);
 
+    sendsession();
+
     pos = ++pos;
     return;
 }
@@ -854,14 +986,23 @@ function upfile_f(){
     var xhr = new XMLHttpRequest();
 
         xhr.onload = function(e){
-
             console.log(xhr.responseText);
             %# レスポンスは確認のみ
         }
 
+       xhr.onerror = function(e){
+           document.getElementById('picchat-img').innerHTML = "on Error : maybe too bigger!"; 
+           return; 
+       }
+
+       try {
         xhr.open("post","https://<%= $url_host %>/fileupload");
 
         xhr.send(form_data);
+       } catch(e) {
+           document.getElementById('picchat-img').innerHTML = "catch Error : " + e;
+           return; 
+      }
 }
 
 function postpic(){
@@ -896,7 +1037,275 @@ function picture_rotate(){
 }
 
 
+function getPosition(){
 
+    // userAgentを調べて、CrOSならタイマーをセット
+    var userAgent = window.navigator.userAgent;
+    var agentcheck = (userAgent.indexOf('CrOS') !== -1 );  // true or false
+
+    if (agentcheck){
+        if ( CrosTimer === null ){
+        console.log("DEBUG: timearray: CrOS set Timer...");
+
+        CrosTimer = window.setInterval( function() {
+            console.log("DEBUG: loop getPosition...");
+            // 一度止めて
+            navigator.geolocation.clearWatch(map.watchID);
+            getPosition();
+        },10000); // 10sec
+
+        timerarray.push(CrosTimer);
+        } // if 
+    }
+
+
+    console.log("getPosition START!!!");
+
+    var geoOptions = {
+        enableHighAccuracy: true,   //高精度要求
+        timeout: 3000,          //タイムアウト(ミリ秒)
+        maximumAge: 0       //キャッシュ有効期限(ミリ秒)
+    }
+    map.watchID =  navigator.geolocation.watchPosition(successCallback, errorCallback,geoOptions);
+
+    function successCallback(position) {
+
+      // MAP表示センター指定
+      user_stat.loc.lat = position.coords.latitude;
+      user_stat.loc.lng = position.coords.longitude;
+
+      user_stat.time = Date.now();
+
+      var mess = { "walkworld" : "postuserdata" ,
+                   "userdata" : user_stat ,
+                 };
+
+      // user_statの送信
+      var messjson = JSON.stringify(mess);
+      ws.send(messjson);
+      console.log("DEBUG: send position data send");
+
+      gpslocal_pos = {"gpslocation": {"latitude": position.coords.latitude,
+                                      "longitude": position.coords.longitude,
+                                      "altitude": position.coords.altitude,
+                                      "accuracy": position.coords.accuracy,
+                                      "altitudeAccuracy": position.coords.altitudeAccuracy,
+                                      "heading": position.coords.heading,
+                                      "speed": position.coords.speed
+                                    }};
+
+   //   console.log("GPS:" + JSON.stringify(gpslocal_pos) );
+   //   console.log("GPS:" + JSON.stringify(user_stat) );
+
+     // 再描写用 GPSの座標をセンターに再描写
+      if ( typeof(map.makerobj) !== 'undefined' ) {
+                                         map.makerobj.setMap(null);
+      }
+      var opt2 = { center: new google.maps.LatLng(user_stat.loc.lat, user_stat.loc.lng)};
+      map.mapobj.setOptions(opt2);
+
+      map.makerobj = new google.maps.Marker({
+                           position: new google.maps.LatLng(user_stat.loc.lat, user_stat.loc.lng),
+                           map: map.mapobj,
+                           title: "mySelf",
+                           icon: localStorage.icon_url,
+                      });
+
+    } //success
+
+    function errorCallback(error) {
+        var err_msg = "";
+        switch(error.code)
+          {
+          case 1:
+            err_msg = "位置情報の利用が許可されていません";
+            break;
+          case 2:
+            err_msg = "デバイスの位置が判定できません";
+            break;
+          case 3:
+            err_msg = "タイムアウトしました";
+            break;
+        }
+        //  alert(err_msg);
+        console.log("DEBUG: " + err_msg);
+        return;
+    }
+
+};  // getPosition()
+
+// map描写
+google.maps.event.addDomListener(window, 'load', function() {
+      map.map = document.getElementById("gmap");
+      map.options = {
+                    zoom: 18,
+                    center: new google.maps.LatLng(user_stat.loc.lat, user_stat.loc.lng),
+                    mapTypeId: google.maps.MapTypeId.ROADMAP,
+                    scaleControl: true,
+                  };
+      map.mapobj = new google.maps.Map(map.map, map.options);
+});
+
+// 測地線航海算法の公式
+function geoDistance(lat1, lng1, lat2, lng2, precision) {
+  // 引数　precision は小数点以下の桁数（距離の精度）
+  var distance = 0;
+  if ((Math.abs(lat1 - lat2) < 0.00001) && (Math.abs(lng1 - lng2) < 0.00001)) {
+    distance = 0;
+  } else {
+    lat1 = lat1 * Math.PI / 180;
+    lng1 = lng1 * Math.PI / 180;
+    lat2 = lat2 * Math.PI / 180;
+    lng2 = lng2 * Math.PI / 180;
+
+    var A = 6378140;
+    var B = 6356755;
+    var F = (A - B) / A;
+
+    var P1 = Math.atan((B / A) * Math.tan(lat1));
+    var P2 = Math.atan((B / A) * Math.tan(lat2));
+
+    var X = Math.acos(Math.sin(P1) * Math.sin(P2) + Math.cos(P1) * Math.cos(P2) * Math.cos(lng1 - lng2));
+    var L = (F / 8) * ((Math.sin(X) - X) * Math.pow((Math.sin(P1) + Math.sin(P2)), 2) / Math.pow(Math.cos(X / 2), 2) - (Math.sin(X) - X) * Math.pow(Math.sin(P1) - Math.sin(P2), 2) / Math.pow(Math.sin(X), 2));
+
+    distance = A * (X + L);
+    var decimal_no = Math.pow(10, precision);
+    distance = Math.round(decimal_no * distance / 1) / decimal_no;   // kmに変換するときは(1000で割る)
+  }
+  return distance;
+}
+
+// Calc Direct
+function geoDirection(lat1, lng1, lat2, lng2) {
+  // 緯度経度 lat1, lng1 の点を出発として、緯度経度 lat2, lng2 への方位
+  // 北を０度で右回りの角度０～３６０度
+  var Y = Math.cos(lng2 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180 - lat1 * Math.PI / 180);
+  var X = Math.cos(lng1 * Math.PI / 180) * Math.sin(lng2 * Math.PI / 180) - Math.sin(lng1 * Math.PI / 180) * Math.cos(lng2 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180 - lat1 * Math.PI / 180);
+  var dirE0 = 180 * Math.atan2(Y, X) / Math.PI; // 東向きが０度の方向
+  if (dirE0 < 0) {
+    dirE0 = dirE0 + 360; //0～360 にする。
+  }
+  var dirN0 = (dirE0 + 90) % 360; //(dirE0+90)÷360の余りを出力 北向きが０度の方向
+  return dirN0;
+}
+
+function pointCalc(rundirect , beta ){
+    // 攻撃範囲の算出関数
+
+         // 経度は、緯度によって変化する1km当たりの度数を返す
+         var R = 6378.1; //km 
+         var cf = Math.cos( user_stat.loc.lat / 180 * Math.PI) * 2 * Math.PI * R; // 円周 km
+         var kd = cf / 360 ;  // 1度のkm
+         var lng_km = 1 / kd; // 軽度/1km
+
+         // 緯度 一定
+         var cd = 2 * Math.PI * R;  // 円周 km
+         var lat_d = cd / 360 ;  // 1度 km
+         var lat_km = 1 / lat_d ; // 1km の 緯
+
+     //   console.log("DEBUG: kmlat: " + lat_km + " kmlng: " + lng_km );
+
+        var x;
+        var y;
+        // 30mを上限として、beta角で座標を取得する
+        var reng = 30;
+        if (( rundirect >= 0 ) && ( rundirect < 90 )){
+            //北東
+             x = user_stat.loc.lng + ((reng * lng_km) / 1000) * Math.cos(beta * Math.PI / 180) ;
+             y = user_stat.loc.lat + ((reng * lat_km) / 1000) * Math.cos(beta * Math.PI / 180) ;
+
+        } else if (( rundirect >= 90 ) && ( rundirect < 180 )){
+            // 南東
+             x = user_stat.loc.lng + ((reng * lng_km) / 1000) * Math.cos(beta * Math.PI / 180) ;
+             y = user_stat.loc.lat - ((reng * lat_km) / 1000) * Math.cos(beta * Math.PI / 180) ;
+
+       } else if (( rundirect >= 180 ) && ( rundirect < 270)){
+            // 南西
+             x = user_stat.loc.lng - ((reng * lng_km) / 1000) * Math.cos(beta * Math.PI / 180) ;
+             y = user_stat.loc.lat - ((reng * lat_km) / 1000) * Math.cos(beta * Math.PI / 180) ;
+
+       } else if (( rundirect >= 270 ) && ( rundirect < 360 )){
+            // 北東 
+             x = user_stat.loc.lng - ((reng * lng_km) / 1000) * Math.cos(beta * Math.PI / 180) ;
+             y = user_stat.loc.lat + ((reng * lat_km) / 1000) * Math.cos(beta * Math.PI / 180) ;
+       } 
+
+    // x,y は自分の位置から方向を含めた相対位置:
+    //console.log("DEBUG: X: " + x + " Y: " + y );
+
+      var atk_dist = geoDistance( user_stat.loc.lat, user_stat.loc.lng, y, x, 6 );
+      document.getElementById('reng').innerHTML = "<p>" +  atk_dist + " m </p>";
+
+    // 方角と範囲に入っていると攻撃成功
+    if ( ghostlist.length != -1 ) {
+        ghostlist.filter( function(e,i){
+            // x,y座標の5m範囲をヒットとする
+            if (( e.loc.lat > (y - (5 * lat_km / 1000))) && ( e.loc.lat < (y + (5 * lat_km / 1000))) && ( e.loc.lng > (x - (5 * lat_km / 1000))) && ( e.loc.lng < (x + (5 * lng_km / 1000)))) {
+
+                    var mess = { "walkworld" : "hitghost" ,
+                                 "uid" : e.uid ,
+                                 "sendto" : "ghostevent",  // pubsubのアドレス
+                               }
+                    ws.send(JSON.stringify(mess));
+                    console.log("DEBUG: send hit ghost event ###########################################");
+               };
+           ghostlist.splice(i,1);
+           user_stat.hitcount++;
+        });
+    }
+
+    return ;
+}
+
+//未使用
+function kmlatlng(lat, lng) {
+         // 緯度によって変化する1km当たりの度数を返す
+         var R = 6378.1; //km 
+         var cf = Math.cos( lat / 180 * Math.pi) * 2 * Math.pi * R; // 円周 km
+         var kd = cf / 360 ;  // 1度のkm
+         var lng_km = 1 / kd; // 軽度/1km
+
+         // 緯度 一定
+         var cd = 2 * Math.pi * R;  // 円周 km
+         var lat_d = cd / 360 ;  // 1度 km
+         var lat_km = 1 / lat_d ; // 1km の 緯
+
+    return ;
+}
+
+function deviceorientationHandler(event) {
+
+    //  console.log("DEBUG: JAIRO START!!");
+
+    %#  console.log("DEBUG: alpha: " + event.alpha);
+    %#  console.log("DEBUG: beta: " + event.beta);
+    %#  console.log("DEBUG: gamma: " + event.gamma);
+    %#  console.log("DEBUG: absolute: " + event.absolute);
+
+      document.getElementById('disp_orient').innerHTML = " alpha: " + event.alpha + "<br> beta: " + event.beta + "<br> gamma: " + event.gamma ;
+
+      user_stat.rundirect = Math.ceil(360 - event.alpha);
+
+      var arrowobj = document.getElementById('arrow');
+          arrowobj.style.transform = "rotateZ(" + user_stat.rundirect + "deg)";
+
+      user_stat.beta = event.beta ;
+
+      pointCalc(user_stat.rundirect, user_stat.beta); // 攻撃位置算出
+
+} // deviceorientationHandler
+
+function devicemotionHandler(event) {
+
+        a = {
+        x : event.acceleration.x,
+        y : event.acceleration.y,
+        z : event.acceleration.z,
+           };
+
+      document.getElementById('disp_motion').innerHTML = " x: " + a.x + "<br> y: " + a.y + "<br> z: " + a.z ;
+
+}
 
 
 
@@ -1053,6 +1462,73 @@ var menuList = {};  // メニュー系トグル処理をまとめる
         }
     }   
 
+    menuList.walkworld = true;  // true = none , false = block 
+    menuList.walkworld_f = function(){
+        if (menuList.walkworld){
+            menuList.walkworld = false;
+            document.getElementById("walkworldmap").style.display="block";  // 表示
+
+            window.addEventListener("deviceorientation", deviceorientationHandler, true); 
+            getPosition();
+
+        } else {
+            menuList.walkworld = true;
+            document.getElementById("walkworldmap").style.display="none";   // 非表示
+            // 追跡の停止
+            navigator.geolocation.clearWatch(map.watchID);
+            window.removeEventListener("deviceorientation", deviceorientationHandler, true);
+
+            if ( CrosTimer !== null ){
+                timerarray.filter( function(e,i){
+                    if ( e === CrosTimer){
+                        timerarray.splice(i,1);
+                    }
+                });
+
+                clearInterval(CrosTimer);
+                CrosTimer = null;
+            } //if CrosTimer
+           // statusの保存
+           localStorage.user_stat = JSON.stringify(user_stat);
+           sendsession(); //backloopにも書く
+        }
+    }   
+
+    menuList.orientation = true;  // true = none , false = block 
+    menuList.orientation_f = function(){
+        if (menuList.orientation){
+            menuList.orientation = false;
+            document.getElementById("deviceorientation").style.display="block";  // 表示
+
+            window.addEventListener("deviceorientation", deviceorientationHandler, true); 
+
+        } else {
+            menuList.orientation = true;
+
+            window.removeEventListener("deviceorientation", deviceorientationHandler, true);
+
+            document.getElementById("deviceorientation").style.display="none";   // 非表示
+            document.getElementById('disp_orient').innerHTML = "";
+        }
+    }   
+
+    menuList.motion = true;  // true = none , false = block 
+    menuList.motion_f = function(){
+        if (menuList.motion){
+            menuList.motion = false;
+            document.getElementById("devicemotion").style.display="block";  // 表示
+
+            window.addEventListener("devicemotion", devicemotionHandler, true);
+
+        } else {
+            menuList.motion = true;
+
+            window.removeEventListener("devicemotion", devicemotionHandler, true);
+            document.getElementById("devicemotion").style.display="none";   // 非表示
+            document.getElementById('disp_motion').innerHTML = "";
+        }
+    }   
+
 function testws(){
 
     ws.close();
@@ -1069,6 +1545,7 @@ window.onload = function(){
 
 </script>
 
+<div id='toppage'>
 <headder>
 testing with google chrome <br>
 </headder>
@@ -1086,6 +1563,9 @@ User Infomation.<br>
             <li><button style="color: #00ff00;" onclick="menuList.oChat_f();">open infomation</button></li>
             <li><button style="color: #00ff00;" onclick="menuList.croomList_f();">chat room List</button></li>
             <li><button style="color: #00ff00;" onclick="menuList.makeChatRoom_f();">WebRTC room start</button></li>
+            <li><button style="color: #00ff00;" onclick="menuList.walkworld_f();">Ghost in map</button></li>
+            <li><button style="color: #00ff00;" onclick="menuList.orientation_f();">Device Orientation</button></li>
+            <li><button style="color: #00ff00;" onclick="menuList.motion_f();">Device Motion</button></li>
         </ul>
     </details>
 </div>
@@ -1147,9 +1627,37 @@ QRcodeをスナップショットで保存してください。
 <div id='takeoverajaxpostdata' ></div>
 </div>
 
+<div id='walkworldmap' style='display: none;'>
+    Ghost in map... <a href="" style="color: #ff0000;">(位置情報は共有されません)</a>
+      <div id='iconrotate'>
+          <div id='reng'></div>
+          <img src='https://<%= $url_host %>/geticon?oid=5ba7449dac3befd89f1462a79e5b60c3633b138414d005b6ef927dda' id='arrow'></img>
+      </div>
+      <div id="gmap" class="mapbase" style="width : 100%; height : 360px;"></div>
+    <div class='menublock'>
+        <details>
+            <summary>Command....</summary>
+            <ul>
+                <li><button style="color: #ff0000;" onclick="">Attack</button></li>
+                <li><button style="color: #ff0000;" onclick="();">Put Tower</button></li>
+                <li><button style="color: #ff0000;" onclick="f();">Put Trap</button></li>
+                <li><button style="color: #ff0000;" onclick="d_f();">Put messageEvent</button></li>
+            </ul>
+        </details>
+    </div>
+</div>
+
+<div id='deviceorientation' style='display: none;'>
+    <div id='disp_orient'></div>
+</div>
+
+<div id='devicemotion' style='display: none;'>
+    <div id='disp_motion'></div>
+</div>
 
 <footer>
 <h6>
     <52through+backbone at gmail.com>
 </h6>
 </footer>
+</div>

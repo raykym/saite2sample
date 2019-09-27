@@ -8,6 +8,10 @@ use Mojo::JSON qw( from_json to_json );
 use lib '/home/debian/perlwork/mojowork/server/site2/lib/Site2/Modules/';
 use Sessionid;
 
+
+# 初期値は16MB
+$ENV{MOJO_MAX_MESSAGE_SIZE} = 100 * 1024 * 1024; # 100MBとす
+
 # デフォルト用アイコン生成
 sub cicon {
   my $self = shift;
@@ -94,6 +98,8 @@ sub geticon {
     use Mojolicious::Types;
     my $types = Mojolicious::Types->new;
 
+    GD::Image->trueColor(1);
+
     my $oid = $self->param('oid');
     my $oriented = $self->param('oriented');
 
@@ -103,6 +109,7 @@ sub geticon {
     my $res = $sth_icon->hash;
     my $params = $res->{params};
        $params = from_json($params);
+
 
        #  my $bimage = GD::Image->newFromJpegData($res->{data});
         my $bimage;
@@ -120,9 +127,23 @@ sub geticon {
 
     my $w = int($bound[0] * $wx);
     my $h = int($bound[1] * $hx);
+
     my $newImage = new GD::Image($w, $h);
-       $newImage->copyResized($bimage, 0, 0, 0, 0, $w, $h, $bound[0], $bound[1]);
+       $newImage->alphaBlending(0);
+       $newImage->saveAlpha(1);
+       #  $newImage->copyResized($bimage, 0, 0, 0, 0, $w, $h, $bound[0], $bound[1]);
+       $newImage->copyResampled($bimage, 0, 0, 0, 0, $w, $h, $bound[0], $bound[1]);
+
     my $oimage;   
+
+    ### TEST jpegデータをもとに透過pngで  fillが動作しない
+    #$params->{mime} = 'png';
+    #  my $transcolor = $newImage->getPixel(0,0);
+    #my @rgb = $newImage->rgb($transcolor);
+    #my $clear = $newImage->colorAllocateAlpha(255,255,255,127);
+    #   $newImage->fill(0,0,$clear);
+    #   $newImage->alphaBlending(0);
+    #   $newImage->saveAlpha(1);
 
     my $extention = $types->detect($params->{mime});
 
@@ -131,11 +152,25 @@ sub geticon {
     }
 
     if (! defined $params->{oriented}){
-           $self->render(data => $newImage->jpeg,format => $extention);
+	    if ( $params->{mime} =~ /jpeg|jpg/ ){
+               $self->render(data => $newImage->jpeg,format => $extention);
+           } elsif ( $params->{mime} =~ /png/ ) {
+               $self->render(data => $newImage->png,format => $extention);
+	   } elsif ( $params->{mime} =~ /gif/ ){
+               $self->render(data => $newImage->gif,format => $extention);
+	   }
     } else {
            $oimage = new GD::Image(50,50);
+           $oimage->alphaBlending(0);
+           $oimage->saveAlpha(1);
            $oimage->copyRotated($newImage,25,25,0,0,50,50,$params->{oriented});
-           $self->render(data => $oimage->jpeg,format => $extention);
+	    if ( $params->{mime} =~ /jpeg|jpg/ ){
+               $self->render(data => $oimage->jpeg,format => $extention);
+           } elsif ( $params->{mime} =~ /png/ ) {
+               $self->render(data => $oimage->png,format => $extention);
+	   } elsif ( $params->{mime} =~ /gif/ ){
+               $self->render(data => $oimage->gif,format => $extention);
+	   }
     }
 
     undef $res;
@@ -153,6 +188,10 @@ sub fileupload {
        my $roomname = $self->param('roomname');
        my $pubstat = $self->param('pubstat');
        my $option = $self->param('option');
+       if ( ! defined $option ) {
+           $option = "";
+       }
+
        my $fileobj = $self->req->upload('filename');
        my $filename = $fileobj->filename;
        my $data = $fileobj->asset->slurp;
