@@ -72,11 +72,13 @@ function loopstart(){
     }
 
      var map = new Object;
-         map.ghostobjects = new Object;;
+         map.ghostobjects = new Object;
+         map.trapeventobj = new Object;
 
      var ghostMax = 3;
 
      var ghostlist = new Object;
+         ghostlistcheck = 0;  // entryghostのチェック
 
     wsCall();  // 起動先行
 
@@ -150,7 +152,7 @@ if (false){  // serverからに変更
                   var liobj = document.createElement("li");
                       liobj.setAttribute("id" , "openchatout");
                       liobj.innerHTML = "<img src=" + evt.icon_url + " > [" + evt.user + "] " + evt.text ;
-                  var ulobj = document.getElementById("openchat");
+                  var ulobj = document.getElementById("openchatout");
 
                     //  ulobj.appendChild(liobj);
                       ulobj.insertBefore(liobj,ulobj.firstChild);
@@ -612,11 +614,19 @@ if (false){  // serverからに変更
              //  console.log("DEBUG: walkworld resuserdata: " + JSON.stringify(reslist) );
 
                ghostlist = reslist.filter( function(e,i){
-                   return  e.category !== 'USER'; 
+                   return e.category === 'NPC';
                });
 
-            if ( ghostlist.length < ghostMax ) {
+               trapevents = reslist.filter( function(e,i){
+                       return e.category === 'MINE' || e.category === 'TOWER';
+               });
+
+            //console.log("DEBUG: ghostlistcheck: " + ghostlistcheck );
+            if (( ghostlist.length < ghostMax ) && (( ghostlist.length != 0) || ( ghostlistcheck == 0 ))){  //発呼済で無い か 応答がある場合
                 // ghost出現イベント
+
+                ghostlistcheck = 0;
+
                 var mess = { "walkworld" : "entryghost" ,
                        "lat" : user_stat.loc.lat ,
                        "lng" : user_stat.loc.lng
@@ -624,6 +634,8 @@ if (false){  // serverからに変更
                 var messjson = JSON.stringify(mess);
                 ws.send(messjson);
                 console.log("DEBUG: send entryghost ");
+                
+                ghostlistcheck = 1;   //発呼済
             }
 
           ghostlist.filter ( function(e,i){
@@ -631,6 +643,19 @@ if (false){  // serverからに変更
                          map.ghostobjects[e.uid].setMap(null);
               } 
               map.ghostobjects[e.uid] = new google.maps.Marker({
+                           position: new google.maps.LatLng(e.loc.lat, e.loc.lng),
+                           map: map.mapobj,
+                           title: e.name,
+                           icon: e.icon_url,
+                      });
+         });
+
+          trapevents.filter ( function(e,i){
+            //  console.log("DEBUG: trapevents: " + e.name );
+              if ( e.uid in map.trapeventobj) {
+                         map.trapeventobj[e.uid].setMap(null);
+              } 
+              map.trapeventobj[e.uid] = new google.maps.Marker({
                            position: new google.maps.LatLng(e.loc.lat, e.loc.lng),
                            map: map.mapobj,
                            title: e.name,
@@ -648,6 +673,18 @@ if (false){  // serverからに変更
              });
              if ( flg === 0 ) {
                          map.ghostobjects[key].setMap(null);
+             }
+         }
+
+         for ( var key in map.trapeventobj ){
+             var flg = 0;
+             trapevents.filter ( function(e,i){
+                 if ( e.uid === key ) {
+                     flg = 1;  // 有り
+                 }
+             });
+             if ( flg === 0 ) {
+                         map.trapeventobj[key].setMap(null);
              }
          }
 
@@ -1207,8 +1244,8 @@ function pointCalc(rundirect , beta ){
 
         var x;
         var y;
-        // 30mを上限として、beta角で座標を取得する
-        var reng = 30;
+        // 20mを上限として、beta角で座標を取得する
+        var reng = 20;
         if (( rundirect >= 0 ) && ( rundirect < 90 )){
             //北東
              x = user_stat.loc.lng + ((reng * lng_km) / 1000) * Math.cos(beta * Math.PI / 180) ;
@@ -1307,6 +1344,37 @@ function devicemotionHandler(event) {
 
 }
 
+function trapevent_mime(){
+
+      var mess = { "walkworld" : "putmine" ,
+                   "name" : user_stat.name,
+                   "lat" : user_stat.loc.lat,
+                   "lng" : user_stat.loc.lng,
+                   "icon_url" : "https://<%= $url_host %>/geticon?oid=cc5408ecbccb006e0135c9685957297cea3657195e1c1b2437bc6dbe"
+                 };
+
+      // user_statの送信
+      var messjson = JSON.stringify(mess);
+      ws.send(messjson);
+      console.log("DEBUG: send trapevent mine");
+
+}
+
+function trapevent_tower(){
+
+      var mess = { "walkworld" : "puttower" ,
+                   "name" : user_stat.name,
+                   "lat" : user_stat.loc.lat,
+                   "lng" : user_stat.loc.lng,
+                   "icon_url" : "https://<%= $url_host %>/geticon?oid=13525cd44fdd5a34f19da7794c4c43a972ff759a9fbcab06bd322712"
+                 };
+
+      // user_statの送信
+      var messjson = JSON.stringify(mess);
+      ws.send(messjson);
+      console.log("DEBUG: send trapevent tower");
+
+}
 
 
 /// menu list toggle
@@ -1639,8 +1707,8 @@ QRcodeをスナップショットで保存してください。
             <summary>Command....</summary>
             <ul>
                 <li><button style="color: #ff0000;" onclick="">Attack</button></li>
-                <li><button style="color: #ff0000;" onclick="();">Put Tower</button></li>
-                <li><button style="color: #ff0000;" onclick="f();">Put Trap</button></li>
+                <li><button style="color: #ff0000;" onclick="trapevent_tower();">Put Tower</button></li>
+                <li><button style="color: #ff0000;" onclick="trapevent_mime();">Put Trap</button></li>
                 <li><button style="color: #ff0000;" onclick="d_f();">Put messageEvent</button></li>
             </ul>
         </details>

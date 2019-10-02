@@ -414,7 +414,7 @@ sub signaling {
 
 		          my $fields = $redis->db->hkeys('ghostaccEntry');  # リミッターを設定する
 			  my @ghostcount = @$fields;
-			  if ( $#ghostcount > 100 ) {
+			  if ( $#ghostcount >= 100 ) {
                               $self->app->log->info("DEBUG: ghostacc limit over ");
 			      return;
 			  }
@@ -457,6 +457,58 @@ sub signaling {
 
                            return;
 		       }
+
+                       if ( $jsonobj->{walkworld} eq "putmine" ){
+
+                          my @latlng = &kmlatlng($jsonobj->{lat}, $jsonobj->{lng});
+			  my $kmlat_d = ($latlng[1] - $latlng[0]) / 2; # (max - min ) / 2
+			  my $kmlng_d = ($latlng[3] - $latlng[2]) / 2;
+			  my $lat = $jsonobj->{lat} + ($kmlat_d / 1000); # 1mずらす
+                          my $lng = $jsonobj->{lng} + ($kmlng_d / 1000);
+		          my $uid = Sessionid->new($jsonobj->{name})->uid;
+
+		          my $trap = { "setuser" => $jsonobj->{name},
+				       "name" => 'mine',
+			               "loc" => { "lat" => $lat , "lng" => $lng },
+				       "uid" => $uid,
+				       "category" => "MINE",
+				       "icon_url" => $jsonobj->{icon_url},
+				       "ttl" => time(),
+			             };
+		          my $trapjson = to_json($trap);
+
+                         $redis->db->hset("trapeventEntry", $uid , $trapjson);
+
+                           return;
+		       }
+
+
+                       if ( $jsonobj->{walkworld} eq "puttower" ){
+
+                          my @latlng = &kmlatlng($jsonobj->{lat}, $jsonobj->{lng});
+			  my $kmlat_d = ($latlng[1] - $latlng[0]) / 2; # (max - min ) / 2
+			  my $kmlng_d = ($latlng[3] - $latlng[2]) / 2;
+			  my $lat = $jsonobj->{lat} + ($kmlat_d / 1000); # 1mずらす
+                          my $lng = $jsonobj->{lng} + ($kmlng_d / 1000);
+		          my $uid = Sessionid->new($jsonobj->{name})->uid;
+
+		          my $trap = { "setuser" => $jsonobj->{name},
+				       "name" => 'tower',
+			               "loc" => { "lat" => $lat , "lng" => $lng },
+				       "uid" => $uid,
+				       "category" => "TOWER",
+				       "icon_url" => $jsonobj->{icon_url},
+				       "ttl" => time(),
+				       "ttlcount" => 120,
+				       "rundirect" => 0,
+			             };
+		          my $trapjson = to_json($trap);
+
+                         $redis->db->hset("trapeventEntry", $uid , $trapjson);
+
+                           return;
+		       }
+
 
 
 
