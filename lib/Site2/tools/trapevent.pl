@@ -173,27 +173,25 @@ my $t = AnyEvent->timer(
 	    my @eventlist = ();
             for my $linejson ( @$res ){
                 my $line = from_json($linejson);
-                   $line->{ttl} = time();          # ttlの更新　いきなり全部消える
+                   $line->{ttl} = time();          # ttlの更新　
 
-		if ($line->{category} eq 'MINE') {
-		    my $linejson = to_json($line);
-		    $redis->db->hset('trapeventEntry' , $line->{uid} , $linejson );
-		}
+		if ( defined $line->{ttlcount} ){
+                   $line->{ttlcount} = $line->{ttlcount} - 1;    # タイムリミット設定
 
-                if ($line->{category} eq 'TOWER' ) {
-                    $line->{ttlcount} = $line->{ttlcount} - 1;    # towerのタイムリミット設定
-		    my $linejson = to_json($line);
-		    $redis->db->hset('trapeventEntry' , $line->{uid} , $linejson );
+	            if ( $line->{ttlcount} <= 0 ) {
+                       $redis->db->hdel('trapeventEntry', $line->{uid});
+	               Logging("Time out $line->{category} delete");
+		       next;
+	            }
+                } # ttlcount
+		my $linejson = to_json($line);
 
-		    if ( $line->{ttlcount} <= 0 ) {
-                        $redis->db->hdel('trapeventEntry', $line->{uid});
-			Logging("Time out TOWER delete");
-			next;
-		    }
-		}
+	        $redis->db->hset('trapeventEntry' , $line->{uid} , $linejson );
+
                 push(@eventlist , $line);
 	    } # for
 
+	    # textに変換してから回す
 	    my @el = ();
             for my $line (@eventlist){
 	        my $linejson = to_json($line);
@@ -214,6 +212,7 @@ my $t = AnyEvent->timer(
                 Logging("DEBUG: pg: $error");
 	    }
 
+	    undef @el;
 	    undef @eventlist;
 	    undef $res;
 });

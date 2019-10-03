@@ -474,6 +474,7 @@ sub signaling {
 				       "category" => "MINE",
 				       "icon_url" => $jsonobj->{icon_url},
 				       "ttl" => time(),
+				       "ttlcount" => 241920,
 			             };
 		          my $trapjson = to_json($trap);
 
@@ -509,7 +510,40 @@ sub signaling {
                            return;
 		       }
 
+		       if ( $jsonobj->{walkworld} eq 'putmessage' ){
 
+                          my @latlng = &kmlatlng($jsonobj->{lat}, $jsonobj->{lng});
+			  my $kmlat_d = ($latlng[1] - $latlng[0]) / 2; # (max - min ) / 2
+			  my $kmlng_d = ($latlng[3] - $latlng[2]) / 2;
+			  my $lat = $jsonobj->{lat} + ($kmlat_d / 1000); # 1mずらす
+                          my $lng = $jsonobj->{lng} + ($kmlng_d / 1000);
+		          my $uid = Sessionid->new($jsonobj->{name})->uid;
+
+		          my $trap = { "setuser" => $jsonobj->{user},
+				       "name" => 'message',
+			               "loc" => { "lat" => $lat , "lng" => $lng },
+				       "uid" => $uid,
+				       "text" => $jsonobj->{text},
+				       "category" => "MESSAGE",
+				       "icon_url" => $jsonobj->{icon_url},
+				       "ttl" => "",
+				       "ttlcount" => $jsonobj->{ttlcount},
+				       "rundirect" => 0,
+			             };
+		          my $trapjson = to_json($trap);
+
+                         $redis->db->hset("trapeventEntry", $uid , $trapjson);
+
+                         return;
+		       }
+                       
+		       if ($jsonobj->{walkworld} eq 'messagedelete'){
+
+			   $redis->db->hdel('trapeventEntry',$jsonobj->{uid});
+                           $self->app->pg->db->query("delete from walkworld where data->>'uid' = ?" , $jsonobj->{uid} );
+
+                           return;
+		       }
 
 
 

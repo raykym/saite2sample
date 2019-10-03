@@ -80,6 +80,7 @@ function loopstart(){
      var ghostlist = new Object;
          ghostlistcheck = 0;  // entryghostのチェック
 
+
     wsCall();  // 起動先行
 
 function wsCall(){
@@ -618,7 +619,8 @@ if (false){  // serverからに変更
                });
 
                trapevents = reslist.filter( function(e,i){
-                       return e.category === 'MINE' || e.category === 'TOWER';
+                       return e.category === 'MINE' || e.category === 'TOWER' || e.category === 'MESSAGE';
+                     //  return e.category !== 'USER' || e.category !== 'NPC';
                });
 
             //console.log("DEBUG: ghostlistcheck: " + ghostlistcheck );
@@ -688,6 +690,55 @@ if (false){  // serverからに変更
              }
          }
 
+         trapevents.filter ( function(e,i){
+
+             var km_d = kmlatlng(user_stat.loc.lat, user_stat.loc.lng);
+           //  console.log("DEBUG: lat: " + km_d.lat_km + " lng: " + km_d.lng_km);
+
+             var lat_d = km_d.lat_km / 1000;
+             var lng_d = km_d.lng_km / 1000;
+
+          //   console.log("DEBUG: lat_d: " + lat_d + " lng_d: " + lng_d);
+
+             // 北緯東経のみ
+             if ( e.category === 'MINE') {
+                 if (( e.loc.lat > (user_stat.loc.lat - lat_d)) && ( e.loc.lat < user_stat.loc.lat + lat_d ) && ( e.loc.lng > (user_stat.loc.lng - lng_d)) && ( e.loc.lng < (user_stat.loc.lng + lng_d))){
+                     
+                     user_stat.damagecount++;
+                     localStorage.user_stat = JSON.stringify(user_stat);
+                     sendsession();
+
+                     var mess = { "type" : "openchat",
+                                  "text" : "TRAPに引っかかった。。。",
+                                  "user" : localStorage.user ,
+                              "icon_url" : localStorage.icon_url
+                                }; 
+
+                     ws.send(JSON.stringify(mess));
+                 }
+             } // MINE
+
+             if ( e.category === 'MESSAGE' ){
+
+             // 北緯東経のみ
+                 if (( e.loc.lat > (user_stat.loc.lat - lat_d)) && ( e.loc.lat < (user_stat.loc.lat + lat_d)) && ( e.loc.lng > (user_stat.loc.lng - lng_d)) && ( e.loc.lng < (user_stat.loc.lng + lng_d))){
+
+                     var mess = { "walkworld" : "messagedelete",
+                                  "uid" : e.uid ,
+                                }; 
+
+                     ws.send(JSON.stringify(mess));
+
+                     window.alert(e.text); 
+
+                 }
+                 
+             } // MESSAGE
+
+         });
+
+
+if (0) {
          // 未使用
          var geo_dirdis = reslist.filter( function(e,i){
                  // すべてのポイントの距離と方角
@@ -695,6 +746,7 @@ if (false){  // serverからに変更
                  var p_direc = geoDirection ( user_stat.loc.lat, user_stat.loc.lng, e.loc.lat, e.loc.lng);
                  return { uid : e.uid, distance : p_dist, direction : Math.ceil(p_direc), category : e.category };
          });
+} // block
 
 
          //pointCalc(user_stat.rundirect, user_stat.beta);
@@ -1294,20 +1346,25 @@ function pointCalc(rundirect , beta ){
     return ;
 }
 
-//未使用
 function kmlatlng(lat, lng) {
          // 緯度によって変化する1km当たりの度数を返す
          var R = 6378.1; //km 
-         var cf = Math.cos( lat / 180 * Math.pi) * 2 * Math.pi * R; // 円周 km
+         var cf = Math.cos( lat / 180 * Math.PI) * 2 * Math.PI * R; // 円周 km
          var kd = cf / 360 ;  // 1度のkm
          var lng_km = 1 / kd; // 軽度/1km
 
          // 緯度 一定
-         var cd = 2 * Math.pi * R;  // 円周 km
+         var cd = 2 * Math.PI * R;  // 円周 km
          var lat_d = cd / 360 ;  // 1度 km
          var lat_km = 1 / lat_d ; // 1km の 緯
 
-    return ;
+             km_d = new Object;
+             km_d.lat_km = lat_km;
+             km_d.lng_km = lng_km;
+
+      //   console.log("DEBUG: kmlatlng: " + lat_km + " | " + lng_km);
+
+    return km_d; 
 }
 
 function deviceorientationHandler(event) {
@@ -1597,6 +1654,35 @@ var menuList = {};  // メニュー系トグル処理をまとめる
         }
     }   
 
+    menuList.trapevent = true;
+    menuList.trapevent_f = function(){
+        if (menuList.trapevent){
+            menuList.trapevent = false;
+            document.getElementById("trapeventmessage").style.display="block";  // 表示
+
+                document.getElementById('trapmsg').addEventListener("keydown" , function(){   
+                    if ((event.keyCode === 13) && (document.getElementById('trapmsg').value )) {
+                        var mess = {"walkworld" : "putmessage" ,
+                                    "text": document.getElementById('trapmsg').value ,
+                                    "user" : localStorage.user ,
+                                    "icon_url" : "https://westwind.backbone.site/geticon?oid=75385e768f5a181f5838417cc0a2067fe50bf266e1f1eeb849cbb90e",
+                                    "lat" : user_stat.loc.lat,
+                                    "lng" : user_stat.loc.lng,
+                                    "ttl" : "",
+                                    "ttlcount" : 241920,
+                                    };
+                        var messjson = JSON.stringify(mess);
+                        ws.send(messjson);
+                        document.getElementById('trapmsg').value = "";
+                    }
+                });
+
+        } else {
+            menuList.trapevent = true;
+            document.getElementById("trapeventmessage").style.display="none";   // 非表示
+        }
+    }
+
 function testws(){
 
     ws.close();
@@ -1706,12 +1792,16 @@ QRcodeをスナップショットで保存してください。
         <details>
             <summary>Command....</summary>
             <ul>
-                <li><button style="color: #ff0000;" onclick="">Attack</button></li>
                 <li><button style="color: #ff0000;" onclick="trapevent_tower();">Put Tower</button></li>
                 <li><button style="color: #ff0000;" onclick="trapevent_mime();">Put Trap</button></li>
-                <li><button style="color: #ff0000;" onclick="d_f();">Put messageEvent</button></li>
+                <li><button style="color: #ff0000;" onclick="menuList.trapevent_f();">Put messageEvent</button></li>
             </ul>
         </details>
+        <div id='trapeventmessage' style="display: none;">
+            <div><h3>TrapEvent Message<h3></div>
+            <p><input type="text" id="trapmsg" placeholder="message..."></p>
+            <div><p id="disp_message"></p></div>
+        </div>
     </div>
 </div>
 
