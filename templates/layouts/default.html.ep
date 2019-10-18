@@ -33,6 +33,9 @@
 	       border-bottom-style: solid;
     	       list-style-type: none;
 	   }
+	   ul.menuline li {
+               display: inline-block;
+	   }
 	   button.addbutton {
                margin: 10px;
 	   }

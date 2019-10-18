@@ -1,8 +1,31 @@
 % layout 'default';
 % title 'this page';
 
+<!-- The core Firebase JS SDK is always required and must be listed first -->
+<script src="https://www.gstatic.com/firebasejs/7.1.0/firebase-app.js"></script>
+
+<!-- TODO: Add SDKs for Firebase products that you want to use
+     https://firebase.google.com/docs/web/setup#available-libraries -->
+<script src="https://www.gstatic.com/firebasejs/6.2.0/firebase-messaging.js"></script>
+
+<script>
+  // Your web app's Firebase configuration
+  var firebaseConfig = {
+    apiKey: "AIzaSyBMKyPUPxYcU6NRHOJt_pOmm6ue_ntZDRk",
+    authDomain: "velvety-decoder-677.firebaseapp.com",
+    databaseURL: "https://velvety-decoder-677.firebaseio.com",
+    projectId: "velvety-decoder-677",
+    storageBucket: "velvety-decoder-677.appspot.com",
+    messagingSenderId: "861600582037",
+    appId: "1:861600582037:web:f48e7a9196af388ba50e9c"
+  };
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+</script>
+
+
 <script type="text/javascript" src="https://maps.google.com/maps/api/js?key=AIzaSyBtLOrp4b2x0j71FcDb1Vn9topnZPTNtaM"></script>
-<script type="text/javascript" src="https://westwind.backbone.site/js/librtc.js"></script>
+<script type="text/javascript" src="https://<%= $url_host %>/js/librtc.js"></script>
 <script type="text/javascript">
 
 // const starttime = performance.now();  // perf
@@ -78,7 +101,8 @@ function loopstart(){
      var ghostMax = 3;
 
      var ghostlist = new Object;
-         ghostlistcheck = 0;  // entryghostのチェック
+         ghostlistcheck = 0;  // entryghostのチェック 
+         ghostlisttimeout = 1; // 5secで制限する
 
 
     wsCall();  // 起動先行
@@ -92,15 +116,6 @@ function wsCall(){
 
     ws.onopen = function(){
         console.log('Connection opened');
-if (false){  // serverからに変更
-        socket_wait = setInterval(function (){
-           var dummsg = {"dummy":"dummy"};
-           ws.send(JSON.stringify(dummsg));
-           console.log("socket wait sending!");
-            }, 50000)
-
-        timerarray.push(socket_wait);
-} // block
         usercheck(); // window.onloadから移転	
         sendsession();
 
@@ -108,7 +123,7 @@ if (false){  // serverからに変更
 
     ws.onclose = function(){
         console.log("WS Connection close... reconnect...");
-        clearInterval(socket_wait); // 50sec dummy STOP
+        clearInterval(entry_wait); 
         alert("制御用接続が切れました。通話はリロードするまで続けられますが文字チャットなどは使えません。");
 
         //user_statの保存
@@ -624,7 +639,8 @@ if (false){  // serverからに変更
                });
 
             //console.log("DEBUG: ghostlistcheck: " + ghostlistcheck );
-            if (( ghostlist.length < ghostMax ) && (( ghostlist.length != 0) || ( ghostlistcheck == 0 ))){  //発呼済で無い か 応答がある場合
+            //console.log("DEBUG: ghostlisttimeout: " + ghostlisttimeout );
+            if ((ghostlisttimeout) && (( ghostlist.length < ghostMax ) && (( ghostlist.length != 0) || ( ghostlistcheck == 0 )))){  //発呼済で無い か 応答がある場合 timeoutで5secに抑制
                 // ghost出現イベント
 
                 ghostlistcheck = 0;
@@ -638,6 +654,7 @@ if (false){  // serverからに変更
                 console.log("DEBUG: send entryghost ");
                 
                 ghostlistcheck = 1;   //発呼済
+                ghostlisttimeout = 0;   // 抑制　timerで処理
             }
 
           ghostlist.filter ( function(e,i){
@@ -713,6 +730,13 @@ if (false){  // serverからに変更
                                   "user" : localStorage.user ,
                               "icon_url" : localStorage.icon_url
                                 }; 
+
+                     ws.send(JSON.stringify(mess));
+                        //処理はmessageイベントの削除と同じなので流用
+                        mess = { 'walkworld' : 'messagedelete' ,
+                                 'uid' : e.uid,
+                                 'opt' : 'mine delete',
+                               };
 
                      ws.send(JSON.stringify(mess));
                  }
@@ -1326,7 +1350,8 @@ function pointCalc(rundirect , beta ){
       document.getElementById('reng').innerHTML = "<p>" +  atk_dist + " m </p>";
 
     // 方角と範囲に入っていると攻撃成功
-    if ( ghostlist.length != -1 ) {
+  //  if ( ghostlist.length != -1 ) {
+    if ( typeof(ghostlist.filter) !== 'undefined' ) {
         ghostlist.filter( function(e,i){
             // x,y座標の5m範囲をヒットとする
             if (( e.loc.lat > (y - (5 * lat_km / 1000))) && ( e.loc.lat < (y + (5 * lat_km / 1000))) && ( e.loc.lng > (x - (5 * lat_km / 1000))) && ( e.loc.lng < (x + (5 * lng_km / 1000)))) {
@@ -1367,14 +1392,11 @@ function kmlatlng(lat, lng) {
     return km_d; 
 }
 
+var doCount = 0;
+
 function deviceorientationHandler(event) {
 
     //  console.log("DEBUG: JAIRO START!!");
-
-    %#  console.log("DEBUG: alpha: " + event.alpha);
-    %#  console.log("DEBUG: beta: " + event.beta);
-    %#  console.log("DEBUG: gamma: " + event.gamma);
-    %#  console.log("DEBUG: absolute: " + event.absolute);
 
       document.getElementById('disp_orient').innerHTML = " alpha: " + event.alpha + "<br> beta: " + event.beta + "<br> gamma: " + event.gamma ;
 
@@ -1389,15 +1411,36 @@ function deviceorientationHandler(event) {
 
 } // deviceorientationHandler
 
+
 function devicemotionHandler(event) {
+
+        event.acceleration.x = null;
+        event.acceleration.y = null;
+        event.acceleration.z = null;
+
+        event.rotationRate.alpha = null;
+        event.rotationRate.beta = null;
+        event.rotationRate.gamma = null;
+
+        event.accelerationIncludingGravity.x = null;
+        event.accelerationIncludingGravity.y = null;
+        event.accelerationIncludingGravity.z = null;
+
+        event.interval = 0;
 
         a = {
         x : event.acceleration.x,
         y : event.acceleration.y,
         z : event.acceleration.z,
+        gx : event.accelerationIncludingGravity.x,
+        gy : event.accelerationIncludingGravity.y,
+        gz : event.accelerationIncludingGravity.z,
+        alpha : event.rotationRate.alpha,
+        beta  : event.rotationRate.beta,
+        gamma : event.rotationRate.gamma,
            };
 
-      document.getElementById('disp_motion').innerHTML = " x: " + a.x + "<br> y: " + a.y + "<br> z: " + a.z ;
+      document.getElementById('disp_motion').innerHTML = " x: " + a.x + "<br> y: " + a.y + "<br> z: " + a.z + "<br> gx: " + a.gx + "<br> gy: " + a.gy + "<br> gz: " + a.gz + "<br> alpha: " + a.alpha + "<br> beta: " + a.beta + "<br> gamma: " + a.gamma;
 
 }
 
@@ -1433,6 +1476,42 @@ function trapevent_tower(){
 
 }
 
+//未使用
+function askPermission() {
+  return new Promise(function(resolve, reject) {
+    const permissionResult = Notification.requestPermission(function(result) {
+      resolve(result);
+    });
+
+    if (permissionResult) {
+      permissionResult.then(resolve, reject);
+    }
+  })
+  .then(function(permissionResult) {
+    if (permissionResult !== 'granted') {
+      throw new Error('We weren\'t granted permission.');
+    }
+  });
+}
+
+//未使用
+function subscribeUserToPush() {
+  return navigator.serviceWorker.register('/sw.js')
+  .then(function(registration) {
+    const subscribeOptions = {
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(
+        'AAAAyJtliZU:APA91bFy4CbCSTFQVLcKaanxPjBR_taMRJDzqgtYFAYYCN-rMbsqOd5NLFXn6J8WiQzrG180Yyy6B2L0AqnG1YPTCy7KsVCUbht-5Ng5yQJt7UpqRO_ZlFOpI7JzlxWDYcR_6R5iVBHX' 
+      )
+    };
+
+    return registration.pushManager.subscribe(subscribeOptions);
+  })
+  .then(function(pushSubscription) {
+    console.log('Received PushSubscription: ', JSON.stringify(pushSubscription));
+    return pushSubscription;
+  });
+}
 
 /// menu list toggle
 var menuList = {};  // メニュー系トグル処理をまとめる
@@ -1593,15 +1672,34 @@ var menuList = {};  // メニュー系トグル処理をまとめる
             menuList.walkworld = false;
             document.getElementById("walkworldmap").style.display="block";  // 表示
 
-            window.addEventListener("deviceorientation", deviceorientationHandler, true); 
+        //    window.addEventListener("deviceorientation", deviceorientationHandler, true); 
+            window.addEventListener("deviceorientationabsolute", deviceorientationHandler, true); 
+            window.addEventListener("devicemotion", devicemotionHandler, true);
             getPosition();
+
+            entry_wait = setInterval(function (){
+                ghostlisttimeout = 1;  // 5秒待って開始する
+            }, 5000);
+            timerarray.push(entry_wait);
 
         } else {
             menuList.walkworld = true;
             document.getElementById("walkworldmap").style.display="none";   // 非表示
             // 追跡の停止
             navigator.geolocation.clearWatch(map.watchID);
-            window.removeEventListener("deviceorientation", deviceorientationHandler, true);
+         //   window.removeEventListener("deviceorientation", deviceorientationHandler, true);
+            window.removeEventListener("deviceorientationabsolute", deviceorientationHandler, true);
+            window.removeEventListener("devicemotion", devicemotionHandler, true);
+
+            if ( entry_wait !== null ){
+                timerarray.filter( function(e,i){
+                    if ( e === entry_wait){
+                        timerarray.splice(i,1);
+                    }
+                });
+            clearInterval(entry_wait); 
+            entry_wait = null;
+            }
 
             if ( CrosTimer !== null ){
                 timerarray.filter( function(e,i){
@@ -1626,11 +1724,13 @@ var menuList = {};  // メニュー系トグル処理をまとめる
             document.getElementById("deviceorientation").style.display="block";  // 表示
 
             window.addEventListener("deviceorientation", deviceorientationHandler, true); 
+         //   window.addEventListener("deviceorientationabsolute", deviceorientationHandler, true); 
 
         } else {
             menuList.orientation = true;
 
             window.removeEventListener("deviceorientation", deviceorientationHandler, true);
+         //   window.removeEventListener("deviceorientationabsolute", deviceorientationHandler, true);
 
             document.getElementById("deviceorientation").style.display="none";   // 非表示
             document.getElementById('disp_orient').innerHTML = "";
@@ -1665,7 +1765,7 @@ var menuList = {};  // メニュー系トグル処理をまとめる
                         var mess = {"walkworld" : "putmessage" ,
                                     "text": document.getElementById('trapmsg').value ,
                                     "user" : localStorage.user ,
-                                    "icon_url" : "https://westwind.backbone.site/geticon?oid=75385e768f5a181f5838417cc0a2067fe50bf266e1f1eeb849cbb90e",
+                                    "icon_url" : "https://<%= $url_host %>/geticon?oid=75385e768f5a181f5838417cc0a2067fe50bf266e1f1eeb849cbb90e",
                                     "lat" : user_stat.loc.lat,
                                     "lng" : user_stat.loc.lng,
                                     "ttl" : "",
@@ -1682,6 +1782,74 @@ var menuList = {};  // メニュー系トグル処理をまとめる
             document.getElementById("trapeventmessage").style.display="none";   // 非表示
         }
     }
+
+    menuList.pushMessage = true;  // true = none , false = block 
+    menuList.pushMessage_f = function(){
+        if (menuList.pushMessage){
+            menuList.pushMessage = false;
+            document.getElementById("pushMessage").style.display="block";  // 表示
+
+            if (!('serviceWorker' in navigator)) {
+            // Service Worker isn't supported on this browser, disable or hide UI.
+                document.getElementById("pushMessage").style.display="none";   // 非表示 該当しない場合閉じる
+            return;
+            }
+
+            if (!('PushManager' in window)) {
+            // Push isn't supported on this browser, disable or hide UI.
+                document.getElementById("pushMessage").style.display="none";   // 非表示 該当しない場合閉じる
+            return;
+            }
+
+            function registerServiceWorker() {
+                return navigator.serviceWorker.register('/sw.js')
+                    .then(function(registration) {
+                        console.log('Service worker successfully registered.');
+                        return registration;
+                })
+                .catch(function(err) {
+                    console.error('Unable to register service worker.', err);
+                });
+            } // registerServiceWorker
+
+            // Retrieve Firebase Messaging object.
+            const messaging = firebase.messaging();
+
+            // Add the public key generated from the console here.
+            messaging.usePublicVapidKey("BPD36tVf0dwrp4ic3yQ6xMsiH_VVIp3d-6IZVTUg4KxiwKCFWfeW-l8cm0YWodk66Ra2JJzDaltHKny5JroZRHI");
+
+
+
+        } else {
+            menuList.motion = true;
+            document.getElementById("pushMessage").style.display="none";   // 非表示
+
+        }
+    }   
+
+    menuList.compasscalibration = true;  // true = none , false = block 
+    menuList.compasscalibration_f = function(){
+        if (menuList.compasscalibration){
+            menuList.compasscalibration = false;
+            document.getElementById("compasscalibration").style.display="block";  // 表示
+
+            window.addEventListener("compassneedscalibration", function(event){
+
+            event.preventDefault();
+
+            }, true);
+
+        } else {
+            menuList.compasscalibration = true;
+
+            window.removeEventListener("compassneedscalibration", function(event){
+                event.preventDefault();
+            }, true);
+
+            document.getElementById("compasscalibration").style.display="none";   // 非表示
+            document.getElementById('disp_calibration').innerHTML = "";
+        }
+    }   
 
 function testws(){
 
@@ -1707,19 +1875,21 @@ testing with google chrome <br>
 User Infomation.<br>
     icon: <a onclick="menuList.iconToggle_f();"><img id='uicon'></img></a>
     user name: <input type='button' id='user' onclick="changeuser()" >
-    <button style="color: #00ff00;" onclick="menuList.accTakeOver_f();">account Take Over</button>
+    <button style="color: #00ff00;" onclick="menuList.accTakeOver_f();">Account Take Over</button>
 </div>
 
 <div class='menublock'>
     <details>
         <summary>Menu....</summary>
-        <ul>
-            <li><button style="color: #00ff00;" onclick="menuList.oChat_f();">open infomation</button></li>
-            <li><button style="color: #00ff00;" onclick="menuList.croomList_f();">chat room List</button></li>
+        <ul class='menuline'>
+            <li><button style="color: #00ff00;" onclick="menuList.oChat_f();">Open Infomation</button></li>
+            <li><button style="color: #00ff00;" onclick="menuList.croomList_f();">Chat room list</button></li>
             <li><button style="color: #00ff00;" onclick="menuList.makeChatRoom_f();">WebRTC room start</button></li>
-            <li><button style="color: #00ff00;" onclick="menuList.walkworld_f();">Ghost in map</button></li>
+            <li><button style="color: #00ff00;" onclick="menuList.walkworld_f();">Ghost in Map</button></li>
             <li><button style="color: #00ff00;" onclick="menuList.orientation_f();">Device Orientation</button></li>
             <li><button style="color: #00ff00;" onclick="menuList.motion_f();">Device Motion</button></li>
+            <li><button style="color: #00ff00;" onclick="menuList.pushMessage_f();">Push Message</button></li>
+            <li><button style="color: #00ff00;" onclick="menuList.compasscalibration_f();">Compass Calibration</button></li>
         </ul>
     </details>
 </div>
@@ -1791,7 +1961,7 @@ QRcodeをスナップショットで保存してください。
     <div class='menublock'>
         <details>
             <summary>Command....</summary>
-            <ul>
+            <ul class='menuline'>
                 <li><button style="color: #ff0000;" onclick="trapevent_tower();">Put Tower</button></li>
                 <li><button style="color: #ff0000;" onclick="trapevent_mime();">Put Trap</button></li>
                 <li><button style="color: #ff0000;" onclick="menuList.trapevent_f();">Put messageEvent</button></li>
@@ -1811,6 +1981,15 @@ QRcodeをスナップショットで保存してください。
 
 <div id='devicemotion' style='display: none;'>
     <div id='disp_motion'></div>
+</div>
+
+<div id='pushMessage' style='display: none;'>
+    <div id='disp_pushmessage'></div>
+</div>
+
+<div id='compasscalibration' style='display: none;'>
+    <div>コンパスを較正する必要があります。機器を持って 8 の字に回してみてください。</div>
+    <div id='disp_calibration'></div>
 </div>
 
 <footer>

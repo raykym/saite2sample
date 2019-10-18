@@ -339,6 +339,17 @@ sub signaling {
 		   # walkworld用イベント   backloopにイベントは記録しない
 		   if ( $jsonobj->{walkworld} ){
 
+	           # logging
+	if (0){
+		   {  
+			$jsonobj->{datetime} = DateTime->now();
+		        $jsonobj->{ttl} = time();
+	             my $jsontext = to_json($jsonobj);
+		     my $datasec = { "data" => $jsontext };
+		        $self->app->pg->db->insert("backloop", $datasec );
+	            }   
+	    } # block
+
                        if ( $jsonobj->{walkworld} eq "postuserdata" ){
 
 			   $self->app->log->debug("DEBUG: walkworld userdata posted");
@@ -402,7 +413,7 @@ sub signaling {
 
                            $clients->{$wsid}->send($messjson);
                            
-                           $self->app->log->debug("DEBUG: send reslist");
+                           $self->app->log->debug("DEBUG: send resuserdata");
 
                            undef $res;
 			   undef $hashlist;
@@ -414,7 +425,7 @@ sub signaling {
 
 		          my $fields = $redis->db->hkeys('ghostaccEntry');  # リミッターを設定する
 			  my @ghostcount = @$fields;
-			  if ( $#ghostcount >= 100 ) {
+			  if ( $#ghostcount >= 99 ) {
                               $self->app->log->info("DEBUG: ghostacc limit over ");
 			      return;
 			  }

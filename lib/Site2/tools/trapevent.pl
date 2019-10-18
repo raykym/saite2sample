@@ -22,11 +22,8 @@ use Encode qw( encode_utf8 decode_utf8 );;
 
 $|=1;
 
-my $redis ||= Mojo::Redis->new("redis://10.140.0.8");
-
-my $pg = Mojo::Pg->new( 'postgresql://sitedata:sitedatapass@%2fcloudsql%2fvelvety-decoder-677:asia-east1:post1/sitedata' );
-
-my $pubsub = Mojo::Pg::PubSub->new( pg => $pg );
+#my $pg = Mojo::Pg->new( 'postgresql://sitedata:sitedatapass@%2fcloudsql%2fvelvety-decoder-677:asia-east1:post1/sitedata' );
+my $pg;
 
 # 表示用ログフォーマット
 sub Logging{
@@ -53,6 +50,8 @@ my $t2;
 
 # 基本無限ループ
 while(1) {
+
+   $pg ||= Mojo::Pg->new( 'postgresql://sitedata:sitedatapass@%2fcloudsql%2fvelvety-decoder-677:asia-east1:post1/sitedata' );
 
     if ( $childpid == -1 ) {
         $childpid = fork();
@@ -95,6 +94,9 @@ $cvp->recv;
 
     } else {
             # childprocess
+
+my $redis ||= Mojo::Redis->new("redis://10.140.0.8");
+my $pubsub = Mojo::Pg::PubSub->new( pg => $pg );
 
 # ghostchat listen
     my $cb_ghost = $pubsub->listen( "ghostevent" => sub {

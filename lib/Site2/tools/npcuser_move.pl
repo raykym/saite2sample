@@ -25,7 +25,8 @@ use Sessionid;
 
 $|=1;
 
-my $pg = Mojo::Pg->new( 'postgresql://sitedata:sitedatapass@%2fcloudsql%2fvelvety-decoder-677:asia-east1:post1/sitedata' );
+#my $pg = Mojo::Pg->new( 'postgresql://sitedata:sitedatapass@%2fcloudsql%2fvelvety-decoder-677:asia-east1:post1/sitedata' );
+my $pg;
 
 # 表示用ログフォーマット
 sub Logging{
@@ -52,6 +53,8 @@ my $t2;
 
 # 基本無限ループ
 while(1) {
+
+   $pg ||= Mojo::Pg->new( 'postgresql://sitedata:sitedatapass@%2fcloudsql%2fvelvety-decoder-677:asia-east1:post1/sitedata' );
 
     if ( $childpid == -1 ) {
         $childpid = fork();
@@ -1064,9 +1067,12 @@ sub baseloop {
 
                  $directchk = abs ( $t_direct - $t_obj->{rundirect}) ;
               #進行方向が同じ場合には、 追い越す:
-              if (( $directchk < 45 ) && ($t_dist < 400 )){
+              if (( $directchk < 45 ) && ($t_dist > 20 ) && (int(rand(359)) == $t_obj->{rundirect})){
 		      #  $addpoint = ( int( $t_dist / 250 ) * $ghostid->{point_spn}[1]) if ( defined $t_dist );   # 最大4倍くらいの加速
                  $addpoint = $ghostid->{point_spn}[1] / ( $t_dist / 1000 ) if ( defined $t_dist );   # 最大16倍くらいの加速
+		 if (int(rand(100)) == 50){
+                     $addpoint = 1; #急激に飛ぶ
+			 }
                  Logging("DEBUG: addpoint: $addpoint $ghostid->{name} ");
                  if ( ! defined $addpoint ) {
                      $addpoint = 0;

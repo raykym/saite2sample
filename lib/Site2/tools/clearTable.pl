@@ -18,11 +18,12 @@ use Mojo::JSON qw( from_json to_json );
 use EV;
 use AnyEvent;
 use Time::HiRes qw( time usleep gettimeofday tv_interval );
-use Encode qw( encode_utf8 decode_utf8 );;
+use Encode qw( encode_utf8 decode_utf8 );
 
 $| =1;  # cache stop
 
-my $pg = Mojo::Pg->new( 'postgresql://sitedata:sitedatapass@%2fcloudsql%2fvelvety-decoder-677:asia-east1:post1/sitedata' );
+#my $pg = Mojo::Pg->new( 'postgresql://sitedata:sitedatapass@%2fcloudsql%2fvelvety-decoder-677:asia-east1:post1/sitedata' );
+my $pg;
 
 # 表示用ログフォーマット
 sub Logging{
@@ -49,6 +50,8 @@ my $t2;
 
 # 基本無限ループ
 while(1) {
+
+    $pg ||= Mojo::Pg->new( 'postgresql://sitedata:sitedatapass@%2fcloudsql%2fvelvety-decoder-677:asia-east1:post1/sitedata' );
 
     if ( $childpid == -1 ) {
         $childpid = fork();
