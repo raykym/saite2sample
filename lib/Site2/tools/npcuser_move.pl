@@ -11,7 +11,8 @@ use EV;
 use Mojo::IOLoop;
 use Mojo::UserAgent;
 use Mojo::JSON qw( from_json to_json);
-use DateTime;
+use Mojo::Date;
+#use DateTime;
 use Math::Trig qw( great_circle_distance rad2deg deg2rad pi );
 use AnyEvent;
 use Mojo::Pg;
@@ -34,7 +35,8 @@ my $pg;
 sub Logging{
     my $logline = shift;
        $logline = encode_utf8($logline);
-    my $dt = DateTime->now();
+       #my $dt = DateTime->now();
+    my $dt = Mojo::Date->new()->to_datetime;
     say "$dt | $logline";
     $logline = decode_utf8($logline);
     my $dblog = { 'PROG' => $0 , 'ttl' => time() , 'logline' => $logline, "dt" => $dt };
@@ -51,7 +53,6 @@ sub Logging{
 
 my $childpid = -1;
 my $t1;
-my $t2;
 
 # 基本無限ループ
 while(1) {
@@ -102,9 +103,9 @@ $cvp->recv;
 
 my $redis ||= Mojo::Redis->new("redis://10.140.0.8");
 
-my $pubsub = Mojo::Pg::PubSub->new( pg => $pg );
+my $pubsub ||= Mojo::Pg::PubSub->new( pg => $pg );
 
-my $ghostid->{rundirect} = int(rand(360));
+#my $ghostid->{rundirect} = int(rand(360));
 
 # icon変更 
 sub iconchg {
@@ -284,7 +285,6 @@ sub writedata {
 
 sub d_correction {
     # rundirectへの補正を検討する   d_correction($npcuser_stat,@pointlist); で利用する
-  #  my ( $ghostid, @pointlist ) = @_;
     my ($ghostid,@pointlist) = @_;
 
     Logging("DEBUG: d_correction: in: $ghostid->{rundirect} pointlist: $#pointlist");
@@ -1777,6 +1777,8 @@ my $t = AnyEvent->timer(
         interval => 1,
            cb => sub {
 
+#    Mojo::IOLoop->recurring ( 1 => sub { 
+
     Logging("loop start");
 
     $t0 = [gettimeofday];
@@ -1787,8 +1789,8 @@ my $t = AnyEvent->timer(
     for my $i (@$reskeys){
 	my $resid = $redis->db->hget('ghostaccEntry',$i);
 	Logging("DEBUG: resid: $resid");
-        $i = from_json($resid);
-        push(@ghostids , $i );
+        my $j = from_json($resid);
+        push(@ghostids , $j );
     }
 
         Logging("make IOLoop");
@@ -1800,12 +1802,15 @@ my $t = AnyEvent->timer(
 	    for my $j ( @loopids ) {
 	        Mojo::IOLoop->remove($j);
 	    }
+
      my $elapsed = tv_interval($t0);
      my $disp = int($elapsed * 1000 );
        Logging("<=== $disp msec ===>");
        Logging("loop next");
      @loopids = ();
-   });  # AnyEvent CV 
+   });  # AnyEvent CV Mojo::IOLoop->recurring
+
+#Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
 
 # TERMシグナルを受けるとメッセージを記録して終了する
 my $sig = AnyEvent->signal(

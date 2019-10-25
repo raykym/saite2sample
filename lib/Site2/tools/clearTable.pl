@@ -13,7 +13,8 @@ use Mojo::IOLoop;
 use Mojo::UserAgent;
 use Mojo::Pg;
 use Mojo::Pg::PubSub;
-use DateTime;
+use Mojo::Date;
+#use DateTime;
 use Mojo::JSON qw( from_json to_json );
 use EV;
 use AnyEvent;
@@ -29,7 +30,8 @@ my $pg;
 sub Logging{
     my $logline = shift;
        $logline = encode_utf8($logline);
-    my $dt = DateTime->now();
+       #my $dt = DateTime->now();
+    my $dt = Mojo::Date->new()->to_datetime;
     say "$dt | $logline";
     $logline = decode_utf8($logline);
     my $dblog = { 'PROG' => $0 , 'ttl' => time() , 'logline' => $logline, "dt" => $dt };
@@ -154,7 +156,8 @@ my $t = AnyEvent->timer(
         my $dt = [ gettimeofday ];
            $pg->db->query( "DELETE from $tbl where (data->>'ttl')::numeric < $pasttime " );
            $tx->commit;
-        my $log = { "PROG" => "$0" , "table" => $tbl , "ttl" => time() , "exectime" => tv_interval($dt) , "datetime" => DateTime->now , "between" => $tablelist->{$tbl} };
+	my $datetime = Mojo::Date->new()->to_datetime;
+        my $log = { "PROG" => "$0" , "table" => $tbl , "ttl" => time() , "exectime" => tv_interval($dt) , "datetime" => $datetime , "between" => $tablelist->{$tbl} };
 	my $logjson = to_json($log);
 	   $pg->db->query("INSERT  INTO log_tbl(data) VALUES ( ? )" , $logjson ); 
 
@@ -167,8 +170,8 @@ my $t = AnyEvent->timer(
 my $sig = AnyEvent->signal(
 	  signal => 'TERM',
 	  cb => sub {
-
-          my $mess = { "PROG" => "$0" , "ttl" => time() , "datetime" => DateTime->now , "message" => "GET signal TERM" };
+          my $datetime = Mojo::Date->new()->to_datetime;
+          my $mess = { "PROG" => "$0" , "ttl" => time() , "datetime" => $datetime , "message" => "GET signal TERM" };
 	  my $messjson = to_json($mess);
 	  $pg->db->query("INSERT INTO log_tbl(data) VALUES ( ? )" , $messjson );
           exit;
