@@ -7,7 +7,7 @@ use warnings;
 use utf8;
 use feature 'say';
 
-#use EV;
+use EV;
 use Mojo::IOLoop;
 use Mojo::UserAgent;
 use Mojo::JSON qw( from_json to_json);
@@ -22,6 +22,8 @@ use Encode qw( encode_utf8 decode_utf8 );;
 use Proc::ProcessTable;
 use lib '/home/debian/perlwork/mojowork/server/site2/lib/Site2/Modules/';
 use Sessionid;
+use Scalar::Util qw( weaken );
+
 
 $|=1;
 
@@ -102,8 +104,7 @@ my $redis ||= Mojo::Redis->new("redis://10.140.0.8");
 
 my $pubsub = Mojo::Pg::PubSub->new( pg => $pg );
 
-my $ghostid->{rundirect} = 0; #仮
-
+my $ghostid->{rundirect} = int(rand(360));
 
 # icon変更 
 sub iconchg {
@@ -485,8 +486,8 @@ sub baseloop {
     #周辺情報の取得
     my ( $lat_min , $lat_max , $lng_min, $lng_max ) = &kmlatlng($ghostid->{loc}->{lat} , $ghostid->{loc}->{lng} ); 
 
-    my $lat_spn = ((($lat_max - $lat_min) / 2) / 1000) * 5 ; # 5m相当 度数
-    my $lng_spn = ((($lng_max - $lng_min) / 2) / 1000) * 5 ;
+    my $lat_spn = ((($lat_max - $lat_min) / 2) / 1000); # 1m相当 度数
+    my $lng_spn = ((($lng_max - $lng_min) / 2) / 1000);
 
     Logging("spn: $lat_spn | $lng_spn ");
 
@@ -550,8 +551,10 @@ sub baseloop {
 
       # trapHitCheck
       Logging("Trapevent check");
-      my $lat_1m = ($ghostid->{point_spn}[0] / 5) /2 ;
-      my $lng_1m = ($ghostid->{point_spn}[1] / 5) /2 ;
+      # my $lat_1m = ($ghostid->{point_spn}[0] / 5) /2 ;
+      # my $lng_1m = ($ghostid->{point_spn}[1] / 5) /2 ;
+      my $lat_1m = $ghostid->{point_spn}[0];  # spnを1mに変更したため
+      my $lng_1m = $ghostid->{point_spn}[1];
       for my $line ( @$hashlist ){
 
           if ( $line->{category} eq 'MINE' ){
@@ -742,7 +745,6 @@ sub baseloop {
 
 		$ghostid->{chasecnt} = 0 if ( $ghostid->{chasecnt} >= 1000 );
        }
-
 
     # 以下はstatusで分岐する
 
@@ -1057,8 +1059,8 @@ sub baseloop {
 
               Logging("Chase Direct: $t_direct Distace: $t_dist ");
 
-              my $addpoint = 0;
-	      if ( $t_dist > 80 ){
+              my $addpoint = 0.0001;
+	      if ( $t_dist > 30 ){
                  $addpoint = $ghostid->{point_spn}[1] / ( $t_dist / 1000 ) if ( defined $t_dist );   # 最大16倍くらいの加速
                  Logging("DEBUG: addpoint: $addpoint $ghostid->{name} ");
 	      }
@@ -1069,10 +1071,12 @@ sub baseloop {
               #進行方向が同じ場合には、 追い越す:
               if (( $directchk < 45 ) && ($t_dist > 20 ) && (int(rand(359)) == $t_obj->{rundirect})){
 		      #  $addpoint = ( int( $t_dist / 250 ) * $ghostid->{point_spn}[1]) if ( defined $t_dist );   # 最大4倍くらいの加速
-                 $addpoint = $ghostid->{point_spn}[1] / ( $t_dist / 1000 ) if ( defined $t_dist );   # 最大16倍くらいの加速
-		 if (int(rand(100)) == 50){
                      $addpoint = 1; #急激に飛ぶ
-			 }
+
+                  if ( $addpoint == 0 ){
+                       $addpoint = $addpoint + rand(0.0001);
+	          }
+
                  Logging("DEBUG: addpoint: $addpoint $ghostid->{name} ");
                  if ( ! defined $addpoint ) {
                      $addpoint = 0;
@@ -1650,7 +1654,7 @@ sub baseloop {
               if (( 270 <= $t_direct)&&( $t_direct < 360 )) { $runway_dir = 4; }
 
 	      #  my $addpoint =  $t_dist / 30000 if ( defined $t_dist );   # 距離(m)を割る
-              my $addpoint = 0.001 + $ghostid->{point_spn}[1] / ( $t_dist / 1000 ) if ( defined $t_dist );   # 最大16倍くらいの加速
+              my $addpoint = $ghostid->{point_spn}[1] / ( $t_dist / 10000 ) if ( defined $t_dist ); 
                  if ( ! defined $addpoint ) {
                      $addpoint = $ghostid->{point_spn}[1];  # lngの値を共通値として利用する
                  }
@@ -1770,7 +1774,7 @@ my $t0 = [gettimeofday];
 my $cv = AE::cv;
 my $t = AnyEvent->timer(
         after => 0,
-        interval => 5,
+        interval => 1,
            cb => sub {
 
     Logging("loop start");
@@ -1779,27 +1783,27 @@ my $t = AnyEvent->timer(
 
     my $reskeys = $redis->db->hkeys('ghostaccEntry');
 
-    my $ghostids = [];
+    my @ghostids = ();
     for my $i (@$reskeys){
 	my $resid = $redis->db->hget('ghostaccEntry',$i);
-	#Logging("DEBUG: resid: $resid");
+	Logging("DEBUG: resid: $resid");
         $i = from_json($resid);
-        push(@$ghostids , $i );
+        push(@ghostids , $i );
     }
 
-	Logging("make IOLoop");
+        Logging("make IOLoop");
             # hkeysで取得したidをループさせる
-            for my $i (@$ghostids) {
-		          push (@loopids , Mojo::IOLoop->timer( 0 => &baseloop($i)));
+            for my $i (@ghostids) {
+		    push (@loopids , Mojo::IOLoop->timer( 0 => &baseloop($i)));
             }
-	        Logging("remove IOLoop");
-            for my $j ( @loopids ) {
-                Mojo::IOLoop->remove($j);
-            }
+        Logging("remove IOLoop");
+	    for my $j ( @loopids ) {
+	        Mojo::IOLoop->remove($j);
+	    }
      my $elapsed = tv_interval($t0);
      my $disp = int($elapsed * 1000 );
-     Logging("<=== $disp msec ===>");
-     Logging("loop next");
+       Logging("<=== $disp msec ===>");
+       Logging("loop next");
      @loopids = ();
    });  # AnyEvent CV 
 

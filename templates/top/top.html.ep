@@ -761,21 +761,6 @@ function wsCall(){
 
          });
 
-
-if (0) {
-         // 未使用
-         var geo_dirdis = reslist.filter( function(e,i){
-                 // すべてのポイントの距離と方角
-                 var p_dist = geoDistance( user_stat.loc.lat, user_stat.loc.lng, e.loc.lat, e.loc.lng, 6 );
-                 var p_direc = geoDirection ( user_stat.loc.lat, user_stat.loc.lng, e.loc.lat, e.loc.lng);
-                 return { uid : e.uid, distance : p_dist, direction : Math.ceil(p_direc), category : e.category };
-         });
-} // block
-
-
-         //pointCalc(user_stat.rundirect, user_stat.beta);
-
-
            return;
         } // resusesrdata
 
