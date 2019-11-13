@@ -2,6 +2,7 @@ package Site2;
 use Mojo::Base 'Mojolicious';
 use Mojolicious::Plugin::OAuth2;
 use Mojo::Pg;
+use Mojolicious::Plugin::Minion;
 
 # This method will run once at server start
 sub startup {
@@ -24,6 +25,9 @@ sub startup {
      $self->app->helper ( pg =>
             sub { state $pg = Mojo::Pg->new( 'postgresql://sitedata:sitedatapass@%2fcloudsql%2fvelvety-decoder-677:asia-east1:post1/sitedata' ); # unix domain socket
          });
+
+# Minion
+     $self->plugin( Minion => { Pg => 'postgresql://minion:minionpass@%2fcloudsql%2fvelvety-decoder-677:asia-east1:post1/minion' });
 
 # $self->app->redis
 #   $self->app->helper( redis =>

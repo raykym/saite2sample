@@ -45,7 +45,7 @@ function loopstart(){
             var fn = timerarray.shift();
                 fn;
                 timerarray.push(fn);  // 再度戻す
-        },5000); // 5sec
+        },1000); // 1sec
 }
 
     var CrosTimer = null;
@@ -100,6 +100,8 @@ function loopstart(){
 
      var ghostMax = 3;
 
+     var directSec = 100/360;
+
      var ghostlist = new Object;
          ghostlistcheck = 0;  // entryghostのチェック 
          ghostlisttimeout = 1; // 5secで制限する
@@ -136,7 +138,7 @@ function wsCall(){
 
     ws.onmessage = function(msg){
                 var evt = JSON.parse(msg.data);
-                console.log(JSON.stringify(evt));
+              //  console.log(JSON.stringify(evt));
 
 
            %# dummyが来たらパス
@@ -1146,18 +1148,17 @@ function getPosition(){
         console.log("DEBUG: timearray: CrOS set Timer...");
 
         CrosTimer = window.setInterval( function() {
-            console.log("DEBUG: loop getPosition...");
+          //  console.log("DEBUG: loop getPosition...");
             // 一度止めて
             navigator.geolocation.clearWatch(map.watchID);
             getPosition();
-        },10000); // 10sec
+        },1000); // 1sec
 
         timerarray.push(CrosTimer);
         } // if 
     }
 
-
-    console.log("getPosition START!!!");
+ //   console.log("getPosition START!!!");
 
     var geoOptions = {
         enableHighAccuracy: true,   //高精度要求
@@ -1181,7 +1182,7 @@ function getPosition(){
       // user_statの送信
       var messjson = JSON.stringify(mess);
       ws.send(messjson);
-      console.log("DEBUG: send position data send");
+    //  console.log("DEBUG: send position data send");
 
       gpslocal_pos = {"gpslocation": {"latitude": position.coords.latitude,
                                       "longitude": position.coords.longitude,
@@ -1387,12 +1388,12 @@ function deviceorientationHandler(event) {
 
       user_stat.rundirect = Math.ceil(360 - event.alpha);
 
-      var arrowobj = document.getElementById('arrow');
-          arrowobj.style.transform = "rotateZ(" + user_stat.rundirect + "deg)";
+   %#   var arrowobj = document.getElementById('arrow');
+   %#       arrowobj.style.transform = "rotateZ(" + user_stat.rundirect + "deg)";
 
       user_stat.beta = event.beta ;
 
-      pointCalc(user_stat.rundirect, user_stat.beta); // 攻撃位置算出
+   %#   pointCalc(user_stat.rundirect, user_stat.beta); // 攻撃距離算出
 
 } // deviceorientationHandler
 
@@ -1663,9 +1664,25 @@ var menuList = {};  // メニュー系トグル処理をまとめる
             getPosition();
 
             entry_wait = setInterval(function (){
-                ghostlisttimeout = 1;  // 5秒待って開始する
-            }, 5000);
+                ghostlisttimeout = 1;  // 2秒待って開始する
+            }, 2000);
             timerarray.push(entry_wait);
+
+            var arrowdirect = 0;
+            direct_wait = setInterval(function (){
+                if ( arrowdirect >= 360 ) {
+                    arrowdirect = 0;
+                } 
+                arrowdirect = arrowdirect + (1 / 3);  // 1/3回転
+
+                var arrowobj = document.getElementById('arrow');
+                    arrowobj.style.transform = "rotateZ(" + arrowdirect + "deg)";
+
+                    pointCalc(arrowdirect, user_stat.beta); // 攻撃距離算出
+
+            }, directSec);
+            timerarray.push(direct_wait);
+
 
         } else {
             menuList.walkworld = true;
@@ -1684,6 +1701,16 @@ var menuList = {};  // メニュー系トグル処理をまとめる
                 });
             clearInterval(entry_wait); 
             entry_wait = null;
+            }
+
+            if ( direct_wait !== null ){
+                timerarray.filter( function(e,i){
+                    if ( e === direct_wait){
+                        timerarray.splice(i,1);
+                    }
+                });
+            clearInterval(direct_wait); 
+            direct_wait = null;
             }
 
             if ( CrosTimer !== null ){
@@ -1871,10 +1898,10 @@ User Infomation.<br>
             <li><button style="color: #00ff00;" onclick="menuList.croomList_f();">Chat room list</button></li>
             <li><button style="color: #00ff00;" onclick="menuList.makeChatRoom_f();">WebRTC room start</button></li>
             <li><button style="color: #00ff00;" onclick="menuList.walkworld_f();">Ghost in Map</button></li>
-            <li><button style="color: #00ff00;" onclick="menuList.orientation_f();">Device Orientation</button></li>
-            <li><button style="color: #00ff00;" onclick="menuList.motion_f();">Device Motion</button></li>
-            <li><button style="color: #00ff00;" onclick="menuList.pushMessage_f();">Push Message</button></li>
-            <li><button style="color: #00ff00;" onclick="menuList.compasscalibration_f();">Compass Calibration</button></li>
+        %#    <li><button style="color: #00ff00;" onclick="menuList.orientation_f();">Device Orientation</button></li>
+        %#    <li><button style="color: #00ff00;" onclick="menuList.motion_f();">Device Motion</button></li>
+        %#    <li><button style="color: #00ff00;" onclick="menuList.pushMessage_f();">Push Message</button></li>
+        %#    <li><button style="color: #00ff00;" onclick="menuList.compasscalibration_f();">Compass Calibration</button></li>
         </ul>
     </details>
 </div>

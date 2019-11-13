@@ -7,8 +7,7 @@ use warnings;
 use utf8;
 use feature 'say';
 
-#use EV;
-use Mojo::IOLoop;
+use EV;
 use Mojo::UserAgent;
 use Mojo::JSON qw( from_json to_json);
 use Mojo::Date;
@@ -211,7 +210,7 @@ my $t = AnyEvent->timer(
                        $pg->db->insert( 'walkworld', $dataset  );
 	        }
                    $tx->commit;
-            }; # eval
+            }; # eval 以下でerrorをキャッチ
 	    if ( my $error = $@ ) {
                 Logging("DEBUG: pg: $error");
 	    }

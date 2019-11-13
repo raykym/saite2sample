@@ -423,12 +423,56 @@ sub signaling {
 
                        if ( $jsonobj->{walkworld} eq "entryghost" ) {
 
-		          my $fields = $redis->db->hkeys('ghostaccEntry');  # リミッターを設定する
-			  my @ghostcount = @$fields;
-			  if ( $#ghostcount >= 99 ) {
-                              $self->app->log->info("DEBUG: ghostacc limit over ");
+		          my $keys = $redis->db->keys('ghostaccEntry*');  # リミッターを設定する
+			  my @npcuser = @$keys;
+			  my @count;
+                          for my $i (@npcuser){
+                          
+			     my $res = $redis->db->hvals($i);
+
+			     # $reshは配列の中身がテキストなので、バイナリに直す ブラウザ側での変換が1度で済む
+			     for my $j (@$res){
+				 push(@count , $j );
+			     }
+
+			  } # for @npcuser 
+
+			  if ( $#count >= 99 ) {
+                              $self->app->log->info("DEBUG: npcuser process limit over ");
 			      return;
 			  }
+			  undef @count;
+
+			  my $setkey;
+
+			  if (!@npcuser){
+                              $setkey = "ghostaccEntry";
+			  } else {
+		              # ghostaccEntryの何処に追加するのか判定する
+			      for my $key (@npcuser){
+		                  my $fields = $redis->db->hkeys($key); 
+			          my @ghostcount = @$fields;
+			          if ( $#ghostcount >= 19 ) {
+			              next;
+			          }
+			          $setkey = $key;
+			          last;
+		              } # for $key
+		          } # else 
+
+			  $self->app->log->info("DEBUG: setkey: $setkey");
+
+			  # setkeyが設定されない場合　プロセスを追加してキーを設定する
+	        	  if ( ! defined $setkey ) {
+                              my $num = int(rand(9999999));
+                              my $sid = Sessionid->new($num)->uid;
+
+			      $setkey = "ghostaccEntry$sid";
+
+			     $self->app->minion->enqueue(procadd => [ $setkey ] );
+
+			     $self->app->log->info("DEBUG: add npcuser_move.pl $sid ");
+		          }
 
                           my @latlng = &kmlatlng($jsonobj->{lat}, $jsonobj->{lng});
 			  my $kmlat_d = ($latlng[1] - $latlng[0]) / 2; # (max - min ) / 2
@@ -436,7 +480,7 @@ sub signaling {
 			  
                           my $g_lat = $jsonobj->{lat} + ((rand($kmlat_d)) - ($kmlat_d / 2)); # 1kmあたりを乱数で、500m分を引いて+-が出るように 
                           my $g_lng = $jsonobj->{lng} + ((rand($kmlng_d)) - ($kmlng_d / 2));
-                          my $num = int(rand(9999999));
+                          my $num = int(rand(999));
                           my $name = "ghost$num";
                           my $uid = Sessionid->new($name)->uid;
 
@@ -452,21 +496,21 @@ sub signaling {
                                           "ttl" => "",
                                           "place" => { "lat" => 0, "lng" => 0, "name" => ""},
                                           "point_spn" => [],
-                                          "lifecount" => 4320,   # 6hour
+                                          "lifecount" => 21600,   # 6hour /sec
 					  "hitcount" => 0,
 					  "chasecnt" => 0 ,
                                          };
 
                           my $ghostaccjson = to_json($ghostacc);
 
-                          $redis->db->hset("ghostaccEntry", $uid , $ghostaccjson );
+                          $redis->db->hset($setkey, $uid , $ghostaccjson );
 
                           $self->app->log->info("DEBUG: ghostacc set: $name $uid ");
 
-			  undef $fields;
-			  undef @ghostcount;
+			  undef $keys;
+			  undef @npcuser;
 
-                           return;
+                          return;
 		       }
 
                        if ( $jsonobj->{walkworld} eq "putmine" ){
