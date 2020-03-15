@@ -1513,6 +1513,17 @@ function subscribeUserToPush() {
 var menuList = {};  // メニュー系トグル処理をまとめる
 
 %# 表示切り替え
+    menuList.uInfo = false;  // true = none , false = block
+    menuList.uInfo_f = function(){
+        if (menuList.uInfo){
+            menuList.uInfo = false;
+            document.getElementById("uInfo").style.display="block";  // 表示
+        } else {
+            menuList.uInfo = true;
+            document.getElementById("uInfo").style.display="none";   // 非表示
+        }
+    }   
+
     menuList.iconUpToggle = true;  // true = none , false = block
     menuList.iconToggle_f = function(){
         if (menuList.iconUpToggle){
@@ -1900,9 +1911,9 @@ window.onload = function(){
 testing with google chrome <br>
 <a href="/explain">site explain</a><br>
 </headder>
-<div class='userinfo'> 
-User Infomation.<br>
-<div id='nowdate'></div>
+<button style="color: #00ff00;" onclick="menuList.uInfo_f();">User Infomation.<br></button>
+<div id='uInfo' class='userinfo' style="display: block"> 
+    datetime: <div id='nowdate'></div>
     icon: <a onclick="menuList.iconToggle_f();"><img id='uicon'></img></a>
     user name: <input type='button' id='user' onclick="changeuser()" >
     <button style="color: #00ff00;" onclick="menuList.accTakeOver_f();">Account Take Over</button>
