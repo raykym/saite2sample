@@ -55,6 +55,7 @@ sub startup {
 #  $r->get('/')->to('example#welcome');
   $r->get('/')->to('top#top');
   $r->post('/qrcode')->to('top#qrcode');
+  $r->get('/explain')->to('top#explain');
 
   $r->get('/ciconimg')->to('filestore#cicon');
   $r->post('/iconupload')->to('filestore#iconupload');

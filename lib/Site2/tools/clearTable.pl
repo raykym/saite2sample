@@ -102,7 +102,7 @@ $cvp->recv;
 
 my $tablelist = {
 	          'walkworld' => '60',
-		  'backloop' => '864000',
+		  'backloop' => '7776000',
 		  'log_tbl' => '86400',
                   };  
 # checkするテーブルをリスト jsonカラムはdataであること jsonにttlカラムでエポックタイムを書き込むこと

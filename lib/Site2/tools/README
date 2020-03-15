@@ -1,0 +1,23 @@
+メモ
+
+clearTable.pl   postgresqlのテーブルメンテナンス用  常時起動　リーク対策分裂
+
+./clearTable.pl > /dev/null 2>&1 &
+
+npcuser_move.pl  walkwordのnpc動作用  常時起動　リーク対策分裂
+
+./npcuser_move.pl > dev/null 2>&1 &
+
+trapevent.pl  walkworldのtrapeventを書き込む。またnpcからのメッセージを処理する 常時起動　リーク対策分裂
+
+./trapevent.pl > /dev/null 2>&1 &
+
+minion-npcuser.pl  20ユニット委譲起動する場合のサブプロセス追加処理 常時起動
+
+./minion-npcuser.pl minion worker > /dev/null 2>&1 &
+
+minion-cmd.pl  minionの管理コマンド　statで状態を確認
+
+
+
+

@@ -13,6 +13,8 @@ use Time::HiRes qw ( time );
 sub new {
     my ($class,$args,$sid) = @_;
     #引数なくてもとりあえずok
+    srand();
+
     return bless { word => $args, sid => $sid } ,$class;
 }
 
@@ -26,7 +28,7 @@ sub sid {
     my $self = shift;
 
     my $sha3 = Digest::SHA3->new();
-    $sha3->add($$, time(), rand(time) );
+    $sha3->add($$, time(), rand(time()) );
     $self->{sid} = $sha3->hexdigest();
     return $self->{sid};
 

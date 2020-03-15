@@ -13,6 +13,8 @@ use Sessionid;
 my $clients = {};
 my $stream_io = {};
 my $pubsub_cb = {};
+my $stream = {};
+
 
 sub signaling {
     my $self = shift;
@@ -29,6 +31,15 @@ sub signaling {
        undef $wsidsend;
        undef $wsidjson;
 
+       my $mess = { "type" => "checkuser" };
+       my $messjson = to_json($mess);
+       $clients->{$wsid}->send($messjson);
+       $stream->{$wsid} = Mojo::IOLoop->stream($self->tx->connection);
+       $stream->{$wsid}->timeout(5);
+       $self->inactivity_timeout(5000); #5secで応答が無いと切れる
+       undef $mess;
+       undef $messjson;
+
     # WebSocket接続維持設定
     #  $stream_io->{$wsid} = Mojo::IOLoop->stream($self->tx->connection);
     #   $stream_io->{$wsid}->timeout(10);   # 10sec timeout 常時接続なのですぐに切れる
@@ -42,7 +53,7 @@ sub signaling {
            #  }
 	       });
 
-          $self->inactivity_timeout(60000); #60sec   50secでdummyが送信され
+       #  $self->inactivity_timeout(60000); #60sec   50secでdummyが送信され
 
     # pubsub listen
           $pubsub_cb->{$wsid} = $self->app->pg->pubsub->listen( $wsid => sub {
@@ -61,7 +72,9 @@ sub signaling {
           });
 
     # redis setup
-          my $redis ||= Mojo::Redis->new("redis://10.140.0.8");
+        my $redisserver = $self->app->config->{redisserver};
+      #my $redis ||= Mojo::Redis->new("redis://10.140.0.8");
+        my $redis ||= Mojo::Redis->new("redis://$redisserver");
 
 # サブルーチンエリア
     sub kmlatlng {
@@ -122,6 +135,14 @@ sub signaling {
 
 		           return;
 		           } # type entry
+
+			 if ( $jsonobj->{type} eq 'rescheckuser' ){
+			     if ( $jsonobj->{res} ne 'USER' ){
+				 $stream->{$wsid}->timeout(60);
+                                 $self->inactivity_timeout(60000); #60sec   50secでdummyが送信され
+			     }
+			     return;
+			 }
 			  
 			  
 		   #下記のイベントを記録する (typeイベント)
@@ -668,6 +689,7 @@ sub signaling {
 
              delete $clients->{$wsid};
 	     Mojo::IOLoop->remove($stream_io->{$wsid});
+	     Mojo::IOLoop->remove($stream->{$wsid});
 
        }); # on finish
 

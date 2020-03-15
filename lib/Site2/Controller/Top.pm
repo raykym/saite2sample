@@ -45,5 +45,10 @@ sub qrcode {
     $self->render( text => $code->render );
 }
 
+sub explain {
+    my $self = shift;
+
+    $self->render();
+}
 
 1;

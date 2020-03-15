@@ -26,6 +26,7 @@
 
 <script type="text/javascript" src="https://maps.google.com/maps/api/js?key=AIzaSyBtLOrp4b2x0j71FcDb1Vn9topnZPTNtaM"></script>
 <script type="text/javascript" src="https://<%= $url_host %>/js/librtc.js"></script>
+
 <script type="text/javascript">
 
 // const starttime = performance.now();  // perf
@@ -51,6 +52,8 @@ function loopstart(){
     var CrosTimer = null;
     var socket_wait = null;
     var ws = null;
+
+    var tz = jstz.determine();
 
     var startflg = null;  // localstreamのon/off判定
     var connid = null;
@@ -79,10 +82,10 @@ function loopstart(){
                        time : "",
                        ttl : "",
                        icon_url : localStorage.icon_url,
-                       category : "USER",
                        rundirect : 0,
                        hitcount : 0,
                        damagecount : 0,
+                       timezone : tz.name(),
                       };
 
     if ( typeof(localStorage.user_stat) === 'undefined' ){
@@ -104,7 +107,7 @@ function loopstart(){
 
      var ghostlist = new Object;
          ghostlistcheck = 0;  // entryghostのチェック 
-         ghostlisttimeout = 1; // 5secで制限する
+         ghostlisttimeout = 1; // 1secで制限する
 
 
     wsCall();  // 起動先行
@@ -152,6 +155,13 @@ function wsCall(){
                      sessionStorage.wsid = evt.wsid;
                      user_stat.wsid = sessionStorage.wsid;
                      return;
+               }
+
+               if ( evt.type === 'checkuser' ) {
+                   var mess = { "type" : "rescheckuser" , "res" : user_stat.category };
+                   var messjson = JSON.stringify(mess);
+                   ws.send(messjson);
+                   return;
                }
 
                if ( evt.type === "oidnotice" ){
@@ -465,7 +475,7 @@ function wsCall(){
                %# 画像
                        tagtext.oid = evt.oid;
                        tagtext.tag = "<img width='350' higth='350' src=https://<%= $url_host %>/fileout?oid=" + tagtext.oid + "></img>";
-                       divobj.innerHTML = tagtext.tag;
+                       divobj.innerHTML = "<h3>image check!(表示向きに問題なければ”post pic”）</h3>" + tagtext.tag;
 
                } else if ( ~evt.mime.indexOf('mpeg') || ~evt.mime.indexOf('3gp') || ~evt.mime.indexOf('mp4') || ~evt.mime.indexOf('m4a') || ~evt.mime.indexOf('mpg') || ~evt.mime.indexOf('mp3') || ~evt.mime.indexOf('octet-stream') ){
                %# 動画
@@ -1129,7 +1139,7 @@ function picture_rotate(){
 
     var divobj = document.getElementById('picchat-img');
         tagtext.tag = "<img width='350' higth='350' src=https://<%= $url_host %>/fileout?oid=" + tagtext.oid + "&oriented=" + list[pos] + "></img>";
-        divobj.innerHTML = tagtext.tag;
+        divobj.innerHTML = "<h3>image check!</h3>" + tagtext.tag;
 
     pos = ++pos;
     return;
@@ -1875,6 +1885,12 @@ window.onload = function(){
     //usercheck(); // usercheckにwsを組み込んだらエラーに成る。
     %# カメラデバイスの検出:
     navigator.mediaDevices.enumerateDevices().then(gotDevices).catch(handleError);
+
+    nowdate_id = setInterval(function (){
+      document.getElementById('nowdate').innerHTML = new Date();
+      }, 1000);
+    timerarray.push(nowdate_id);
+
 }
 
 </script>
@@ -1882,9 +1898,11 @@ window.onload = function(){
 <div id='toppage'>
 <headder>
 testing with google chrome <br>
+<a href="/explain">site explain</a><br>
 </headder>
 <div class='userinfo'> 
 User Infomation.<br>
+<div id='nowdate'></div>
     icon: <a onclick="menuList.iconToggle_f();"><img id='uicon'></img></a>
     user name: <input type='button' id='user' onclick="changeuser()" >
     <button style="color: #00ff00;" onclick="menuList.accTakeOver_f();">Account Take Over</button>
@@ -1894,10 +1912,16 @@ User Infomation.<br>
     <details>
         <summary>Menu....</summary>
         <ul class='menuline'>
+          <p>
             <li><button style="color: #00ff00;" onclick="menuList.oChat_f();">Open Infomation</button></li>
+          </p>
+          <p>
             <li><button style="color: #00ff00;" onclick="menuList.croomList_f();">Chat room list</button></li>
             <li><button style="color: #00ff00;" onclick="menuList.makeChatRoom_f();">WebRTC room start</button></li>
+          </p>
+          <p>
             <li><button style="color: #00ff00;" onclick="menuList.walkworld_f();">Ghost in Map</button></li>
+          </p>
         %#    <li><button style="color: #00ff00;" onclick="menuList.orientation_f();">Device Orientation</button></li>
         %#    <li><button style="color: #00ff00;" onclick="menuList.motion_f();">Device Motion</button></li>
         %#    <li><button style="color: #00ff00;" onclick="menuList.pushMessage_f();">Push Message</button></li>
@@ -1937,6 +1961,7 @@ Icon upload...(JPEG only)<br>
     <div id="chatroomleft">
         <p id='roomdisplay'></p>
         <input type="text" id="roomname" placeholder="room...">
+    %#    <h6><p>二人以上入室したら、callを押すと通話出来ます。hangupで切断、退室になります</p></h6>
         <ul id="chatroommember" class='chatmem'></ul>
     </div>
     <div id="chatroomright">
@@ -1951,7 +1976,7 @@ Icon upload...(JPEG only)<br>
                     <input type="button" value="upload&check" onclick="upfile_f();">
                 </form>
                 <input type="button" value="picture Rotate choice" onclick="picture_rotate();">
-                <input type="button" value="post pic" onclick="postpic();">
+                <input type="button" value="post pic" style="color: #00ff00;" onclick="postpic();">
             </div>
         <ul id='chatroomout'></ul></p>
     </div>
@@ -2004,9 +2029,12 @@ QRcodeをスナップショットで保存してください。
     <div id='disp_calibration'></div>
 </div>
 
+<div class="footer">
 <footer>
 <h6>
     <52through+backbone at gmail.com>
 </h6>
 </footer>
+</div>
+
 </div>

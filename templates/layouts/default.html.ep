@@ -27,6 +27,7 @@
     	   	    list-style-type: none;
             }  
 	   .userinfo {
+	       border-top-style: solid;
 	       border-bottom-style: solid;
 	    }
 	   .menublock {
@@ -55,6 +56,13 @@
            #iconrotate {
               text-align: center;
            }
+           #chatroomout li {
+	       border-top-style: solid;
+    	       list-style-type: none;
+	   }
+	   .footer {
+	       border-top-style: solid;
+	   }
 	     
        </style>
   <script type="text/javascript" src="https://westwind.backbone.site/js/jstz.main.js"></script>

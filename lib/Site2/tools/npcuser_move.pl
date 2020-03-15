@@ -1895,12 +1895,9 @@ undef $cvp;
     } else {
 	    # childprocess
 
-$redis ||= Mojo::Redis->new("redis://10.140.0.8");
+$redis ||= Mojo::Redis->new("redis://10.140.0.10");
 
 $pubsub ||= Mojo::Pg::PubSub->new( pg => $pg );
-
-#my $ghostid->{rundirect} = int(rand(360));
-
 
 my $t0 = [gettimeofday];
 
@@ -1944,7 +1941,6 @@ my $t = AnyEvent->timer(
     }
 
     # 親プロセスを判定して、killコマンドを発行できるようにする
-
     if ( $clearcnt >= 30 ){
         Logging(" TERM process send SIG KILL");
         my $ptbl = Proc::ProcessTable->new;
@@ -1957,8 +1953,6 @@ my $t = AnyEvent->timer(
             }
         } # for
     } # if
-
-
 
     my $subprocess = Mojo::IOLoop::Subprocess->new;
 
