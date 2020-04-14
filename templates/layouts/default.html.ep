@@ -31,6 +31,7 @@
 	       border-bottom-style: solid;
 	    }
 	   .menublock {
+	       border-top-style: solid;
 	       border-bottom-style: solid;
     	       list-style-type: none;
 	   }

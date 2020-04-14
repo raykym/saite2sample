@@ -71,6 +71,8 @@ function loopstart(){
 
     var tagtext = new Object;   //file投稿用タグデータ
 
+    var entry_wait = null;
+
     var user_stat = {
                        loc : { lat : '0' ,
                                lng : '0'
@@ -1098,6 +1100,7 @@ function upfile_f(){
         xhr.onload = function(e){
             console.log(xhr.responseText);
             %# レスポンスは確認のみ
+            document.getElementById('chatpostpic').disabled = "";  // postpic ボタンを有効にする
         }
 
        xhr.onerror = function(e){
@@ -1128,6 +1131,7 @@ function postpic(){
     ws.send(messjson);
     tagtext = new Object;
     menuList.picchat_f(); //閉じる
+    document.getElementById('chatpostpic').disabled = true; // postbicボタンを無効に
 }
 
 function picture_rotate(){
@@ -1913,7 +1917,7 @@ testing with google chrome <br>
 </headder>
 <button style="color: #00ff00;" onclick="menuList.uInfo_f();">User Infomation.<br></button>
 <div id='uInfo' class='userinfo' style="display: block"> 
-    datetime: <div id='nowdate'></div>
+    <div id='nowdate'></div>
     icon: <a onclick="menuList.iconToggle_f();"><img id='uicon'></img></a>
     user name: <input type='button' id='user' onclick="changeuser()" >
     <button style="color: #00ff00;" onclick="menuList.accTakeOver_f();">Account Take Over</button>
@@ -1924,7 +1928,7 @@ testing with google chrome <br>
         <summary>Menu....</summary>
         <ul class='menuline'>
           <p>
-            <li><button style="color: #00ff00;" onclick="menuList.oChat_f();">Open Infomation</button></li>
+            <li><button style="color: #00ff00;" onclick="menuList.oChat_f();">Open Text Chat</button></li>
           </p>
           <p>
             <li><button style="color: #00ff00;" onclick="menuList.croomList_f();">Chat room list</button></li>
@@ -1952,6 +1956,12 @@ Icon upload...(JPEG only)<br>
     <input type="button" value="icon Rotate choice" onclick="icon_rotate();">
 </div>
 
+<div id="acctakeover" style="display: none;">
+QRcodeをスナップショットで保存してください。
+アカウントを移動したいブラウザで開くことでアカウントを移動します。
+<div id='takeoverajaxpostdata' ></div>
+</div>
+
 <div id='openchat' style="display: none;">
     <div><h3>Open Infomation<h3></div>
     <p><input type="text" id="msg" placeholder="message..."></p>
@@ -1972,7 +1982,7 @@ Icon upload...(JPEG only)<br>
     <div id="chatroomleft">
         <p id='roomdisplay'></p>
         <input type="text" id="roomname" placeholder="room...">
-    %#    <h6><p>二人以上入室したら、callを押すと通話出来ます。hangupで切断、退室になります</p></h6>
+        <h6><p>二人以上入室したら、callを押すと通話出来ます。hangupで切断、退室になります</p></h6>
         <ul id="chatroommember" class='chatmem'></ul>
     </div>
     <div id="chatroomright">
@@ -1987,16 +1997,10 @@ Icon upload...(JPEG only)<br>
                     <input type="button" value="upload&check" onclick="upfile_f();">
                 </form>
                 <input type="button" value="picture Rotate choice" onclick="picture_rotate();">
-                <input type="button" value="post pic" style="color: #00ff00;" onclick="postpic();">
+                <input type="button" value="post pic" id='chatpostpic' disabled style="color: #00ff00;" onclick="postpic();">
             </div>
         <ul id='chatroomout'></ul></p>
     </div>
-</div>
-
-<div id="acctakeover" style="display: none;">
-QRcodeをスナップショットで保存してください。
-アカウントを移動したいブラウザで開くことでアカウントを移動します。
-<div id='takeoverajaxpostdata' ></div>
 </div>
 
 <div id='walkworldmap' style='display: none;'>

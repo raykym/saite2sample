@@ -12,7 +12,7 @@ trapevent.pl  walkworldのtrapeventを書き込む。またnpcからのメッセ
 
 ./trapevent.pl > /dev/null 2>&1 &
 
-minion-npcuser.pl  20ユニット委譲起動する場合のサブプロセス追加処理 常時起動
+minion-npcuser.pl  20ユニット以上起動する場合のサブプロセス追加処理 常時起動
 
 ./minion-npcuser.pl minion worker > /dev/null 2>&1 &
 
