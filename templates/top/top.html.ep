@@ -1101,6 +1101,7 @@ function upfile_f(){
             console.log(xhr.responseText);
             %# レスポンスは確認のみ
             document.getElementById('chatpostpic').disabled = "";  // postpic ボタンを有効にする
+            document.getElementById('picrotate').disabled = "";  // picture rotate ボタンを有効にする
         }
 
        xhr.onerror = function(e){
@@ -1131,7 +1132,8 @@ function postpic(){
     ws.send(messjson);
     tagtext = new Object;
     menuList.picchat_f(); //閉じる
-    document.getElementById('chatpostpic').disabled = true; // postbicボタンを無効に
+    document.getElementById('chatpostpic').disabled = true; // postpicボタンを無効に
+    document.getElementById('picrotate').disabled = true; // picture rotateボタンを無効に
 }
 
 function picture_rotate(){
@@ -1996,7 +1998,7 @@ QRcodeをスナップショットで保存してください。
                     <input type="file" accept="*/*;capture=camera" name="filename" id="fileup" onchange=""> 
                     <input type="button" value="upload&check" onclick="upfile_f();">
                 </form>
-                <input type="button" value="picture Rotate choice" onclick="picture_rotate();">
+                <input type="button" value="picture Rotate choice" id='picrotate' disabled onclick="picture_rotate();">
                 <input type="button" value="post pic" id='chatpostpic' disabled style="color: #00ff00;" onclick="postpic();">
             </div>
         <ul id='chatroomout'></ul></p>
