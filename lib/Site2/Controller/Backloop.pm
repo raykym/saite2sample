@@ -696,3 +696,52 @@ sub signaling {
 
 } # signaling
 
+# 
+sub delclientwsid {
+    my $self = shift;
+    
+    # redis setup
+    my $redisserver = $self->app->config->{redisserver};
+    my $redis ||= Mojo::Redis->new("redis://$redisserver");
+
+    my $wsid = $self->param('wsid');
+    my $roomname = $self->param('roomname');
+    my $pubstat = $self->param('pubstat');
+
+    if ((! defined $wsid ) || ( ! defined $roomname ) || ( ! defined $pubstat )){
+        $self->render( status => '200' );  # とりあえず終わらせる
+        return;
+    }
+
+    $self->app->log->info("finish connection $wsid by client");
+
+    my $res = $redis->db->keys("ENTRY$pubstat$roomname");
+
+    for my $key (@$res){
+        my $fields = $redis->db->hkeys($key);  # fieldをチェックして一致したら削除する
+            for my $id (@$fields){
+                if ( $wsid eq $id ) {
+                    $redis->db->hdel($key , $id ); # wsidを削除する
+                    $self->app->log->info("DEBUG: delete ENTRY: $key $id");
+                }
+            }
+    } # for $res   ENTRYchatrooms
+
+    delete $clients->{$wsid};
+    Mojo::IOLoop->remove($stream_io->{$wsid});
+    Mojo::IOLoop->remove($stream->{$wsid});
+
+    # とりあえずレスポンスしておく
+    $self->render( status => '200' );
+
+    undef $wsid;
+    undef $roomname;
+    undef $pubstat;
+    undef $redisserver;
+    undef $redis;
+    undef $res;
+
+}
+
+
+

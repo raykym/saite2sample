@@ -66,6 +66,8 @@ sub startup {
   $r->get('/transferuser/:uid')->to('transferuser#accept');
   $r->post('/obsoleteuid')->to('transferuser#uidobsolete');
 
+  $r->post('/delclientwsid')->to('backloop#delclientwsid');
+
   # test
   $r->get('/imgchk')->to('filestore#imgchk');
   $r->any('/imgout')->to('filestore#imgout');

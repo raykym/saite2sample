@@ -135,6 +135,34 @@ function wsCall(){
 
         //user_statの保存
         localStorage.user_stat = JSON.stringify(user_stat);
+
+        // serverへの通知
+        var form_data = new FormData();
+        form_data.append("wsid" , sessionStorage.wsid );
+        form_data.append("roomname" , chatRoomInfo.roomname );
+        form_data.append("pubstat" , chatRoomInfo.pubstat ); 
+
+        var xhr = new XMLHttpRequest();
+
+        xhr.onload = function(e){
+            console.log(xhr.responseText);
+            %# レスポンスは確認のみ
+        }
+
+       xhr.onerror = function(e){
+           // dum
+           return; 
+       }
+
+       try {
+        xhr.open("post","https://<%= $url_host %>/delclientwsid");
+
+        xhr.send(form_data);
+       } catch(e) {
+           // dum
+           return;
+       }
+
     };
 
     ws.onerror = function(){
@@ -1914,7 +1942,8 @@ window.onload = function(){
 
 <div id='toppage'>
 <headder>
-testing with google chrome <br>
+Fullmesh WebRTC chat room. <br>
+testing with google chrome. <br>
 <a href="/explain">site explain</a><br>
 </headder>
 <button style="color: #00ff00;" onclick="menuList.uInfo_f();">User Infomation.<br></button>
