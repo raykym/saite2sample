@@ -709,7 +709,7 @@ sub delclientwsid {
     my $pubstat = $self->param('pubstat');
 
     if ((! defined $wsid ) || ( ! defined $roomname ) || ( ! defined $pubstat )){
-        $self->render( status => '200' );  # とりあえず終わらせる
+        $self->render( text => 'ok' , status => '200' );  # とりあえず終わらせる
         return;
     }
 
@@ -732,7 +732,7 @@ sub delclientwsid {
     Mojo::IOLoop->remove($stream->{$wsid});
 
     # とりあえずレスポンスしておく
-    $self->render( status => '200' );
+    $self->render( text => 'ok' , status => '200' );
 
     undef $wsid;
     undef $roomname;
