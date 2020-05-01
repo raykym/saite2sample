@@ -507,7 +507,7 @@ function wsCall(){
                        tagtext.tag = "<img width='350' higth='350' src=https://<%= $url_host %>/fileout?oid=" + tagtext.oid + "></img>";
                        divobj.innerHTML = "<h3>image check!(表示向きに問題なければ”post pic”）</h3>" + tagtext.tag;
 
-               } else if ( ~evt.mime.indexOf('mpeg') || ~evt.mime.indexOf('3gp') || ~evt.mime.indexOf('mp4') || ~evt.mime.indexOf('m4a') || ~evt.mime.indexOf('mpg') || ~evt.mime.indexOf('mp3') || ~evt.mime.indexOf('octet-stream') ){
+               } else if ( ~evt.mime.indexOf('mpeg') || ~evt.mime.indexOf('3gp') || ~evt.mime.indexOf('mp4') || ~evt.mime.indexOf('m4a') || ~evt.mime.indexOf('mpg') || ~evt.mime.indexOf('mp3') || ~evt.mime.indexOf('octet-stream') || ~evt.mime.indexOf('flac') ){
                %# 動画
                        tagtext.oid = evt.oid;
                        tagtext.tag = "<video width='350' hight='350' controls src=https://<%= $url_host %>/fileout?oid=" + tagtext.oid +"></video>";

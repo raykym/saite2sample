@@ -291,7 +291,7 @@ sub fileout {
 	#   my $extention = $types->detect($params->{mime});
 	#   $self->render(data => $res->{data},format => $extention);
 
-    } elsif ( $params->{mime} =~ /mpeg|mpg|3gp|mp4|m4a|realtext|mp3|octet-stream/){
+    } elsif ( $params->{mime} =~ /mpeg|mpg|3gp|mp4|m4a|realtext|mp3|octet-stream|flac/){
 
         my $extention = $types->detect($params->{mime});
 

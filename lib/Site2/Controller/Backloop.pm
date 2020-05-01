@@ -35,8 +35,8 @@ sub signaling {
        my $messjson = to_json($mess);
        $clients->{$wsid}->send($messjson);
        $stream->{$wsid} = Mojo::IOLoop->stream($self->tx->connection);
-       $stream->{$wsid}->timeout(5);
-       $self->inactivity_timeout(5000); #5secで応答が無いと切れる
+       $stream->{$wsid}->timeout(60);
+       $self->inactivity_timeout(60000); #60secで応答が無いと切れる
        undef $mess;
        undef $messjson;
 
@@ -205,10 +205,15 @@ sub signaling {
                             my @roomlist = ();
                             for my $key (@$res){
                             
-				   $key =~ s/ENTRYpublic//;    # prefixを除去
-
-                                push (@roomlist , $key);
-
+				    #  $key =~ s/ENTRYpublic//;    # prefixを除去
+				    #  push (@roomlist , $key);
+				    #  roomnameをハッシュに置き換えるために、上2行を処理を変更する
+				my $reskeyroom = $redis->db->hvals($key);
+				for my $proom ( @$reskeyroom){
+					$proom = from_json($proom);
+                                        push (@roomlist , $proom->{room});
+					last; # 強制で1回のみ実行
+			        }
 			    }
 
 			    my $roomlist = \@roomlist;
