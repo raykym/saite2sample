@@ -139,7 +139,7 @@ function wsCall(){
         // serverへの通知
         var form_data = new FormData();
         form_data.append("wsid" , sessionStorage.wsid );
-        form_data.append("roomname" , chatRoomInfo.roomname );
+        form_data.append("roomnamehash" , chatRoomInfo.roomnamehash );
         form_data.append("pubstat" , chatRoomInfo.pubstat ); 
 
         var xhr = new XMLHttpRequest();
@@ -216,6 +216,18 @@ function wsCall(){
                       ulobj.insertBefore(liobj,ulobj.firstChild);
 
                   return;
+               }
+
+               if ( evt.type === "makechatroomact" ) {
+
+                   chatRoomInfo.roomnamehash = evt.roomnamehash;
+
+                   console.log("DEBUG: " + chatRoomInfo.roomnamehash + "get!");
+
+                   member();
+                   reloadmem();
+
+                   return;
                }
 
                if ( evt.type === "roomlistnotice" ) {
@@ -382,6 +394,8 @@ function wsCall(){
                // public chatroom List からのエントリー受付
                if ( evt.type === "entrychatroomact" ){
 
+                   chatRoomInfo.roomnamehash = evt.roomnamehash;
+
                // chatroom char chat 別の場所に重複あり
                     document.getElementById('cchat').addEventListener("keydown" , function(){   
                         if ((event.keyCode === 13) && (document.getElementById('cchat').value )) {
@@ -393,6 +407,7 @@ function wsCall(){
                                         "user" : localStorage.user ,
                                         "icon_url" : localStorage.icon_url,
                                         "roomname" : chatRoomInfo.roomname ,
+                                        "roomnamehash" : chatRoomInfo.roomnamehash,
                                         "pubstat" : chatRoomInfo.pubstat
                                         };
                             var messjson = JSON.stringify(mess);
@@ -959,7 +974,12 @@ function icon_del(){
 
 function member(){
    %# メンバーリストの更新 from は connidの登録に必要
-    var getlist = {"type":"getlist" , "pubstat" : chatRoomInfo.pubstat , "roomname" : chatRoomInfo.roomname, "from" : sessionStorage.wsid }; 
+    var getlist = {"type":"getlist" ,
+                   "pubstat" : chatRoomInfo.pubstat ,
+                   "roomname" : chatRoomInfo.roomname,
+                   "from" : sessionStorage.wsid ,
+                   "roomnamehash" : chatRoomInfo.roomnamehash
+                   }; 
     ws.send(JSON.stringify(getlist));
     console.log("send getlist message");
 }
@@ -968,7 +988,8 @@ function reloadmem() {
                     // メンバーへのreload要請
                     var relmess = { "type" : "reloadmember" ,
                                     "roomname" : chatRoomInfo.roomname ,
-                                    "pubstat" : chatRoomInfo.pubstat 
+                                    "pubstat" : chatRoomInfo.pubstat ,
+                                    "roomnamehash" : chatRoomInfo.roomnamehash
                                   };
                     var resmessjson = JSON.stringify(relmess);
                     ws.send(resmessjson); 
@@ -1002,7 +1023,8 @@ function call(){
         var mess = { "roomname" : chatRoomInfo.roomname ,
                      "pubstat" : chatRoomInfo.pubstat ,
                      "type" : "detachvoice" ,
-                     "from" : sessionStorage.wsid
+                     "from" : sessionStorage.wsid ,
+                     "roomnamehash" : chatRoomInfo.roomnamehash
                     };
 
        var messjson = JSON.stringify(mess);
@@ -1120,7 +1142,7 @@ function upfile_f(){
     }
     var form_data = new FormData(form);
         form_data.append("wsid" , sessionStorage.wsid );
-        form_data.append("roomname" , chatRoomInfo.roomname );
+        form_data.append("roomnamehash" , chatRoomInfo.roomnamehash );
         form_data.append("pubstat" , chatRoomInfo.pubstat );
 
     var xhr = new XMLHttpRequest();
@@ -1154,6 +1176,7 @@ function postpic(){
                 "user" : localStorage.user ,
                 "icon_url" : localStorage.icon_url,
                 "roomname" : chatRoomInfo.roomname ,
+                "roomnamehash" : chatRoomInfo.roomnamehash ,
                 "pubstat" : chatRoomInfo.pubstat
                 };
     var messjson = JSON.stringify(mess);
@@ -1643,14 +1666,16 @@ var menuList = {};  // メニュー系トグル処理をまとめる
                                     "wsid" : sessionStorage.wsid ,
                                     "pubstat" : chatRoomInfo.pubstat 
                                    };
+                        %# roomnamehashはまだない
                         var messjson = JSON.stringify(mess);
                         ws.send(messjson);
                         document.getElementById('roomname').value = "";
                         document.getElementById('roomdisplay').innerHTML = chatRoomInfo.pubstat + " " + chatRoomInfo.roomname ;
                         document.getElementById('cchat').focus();
 
-                    member();
-                    reloadmem();
+                  %# roomnamehashに変わったので、位置を変える
+                  %#  member();
+                  %#  reloadmem();
 
                     } // keydown
                 });
@@ -1666,6 +1691,7 @@ var menuList = {};  // メニュー系トグル処理をまとめる
                                     "user" : localStorage.user ,
                                     "icon_url" : localStorage.icon_url,
                                     "roomname" : chatRoomInfo.roomname ,
+                                    "roomnamehash" : chatRoomInfo.roomnamehash ,
                                     "pubstat" : chatRoomInfo.pubstat
                                     };
                         var messjson = JSON.stringify(mess);

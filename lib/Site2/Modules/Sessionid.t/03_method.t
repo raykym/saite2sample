@@ -9,7 +9,7 @@ use lib '/home/debian/perlwork/mojowork/server/site2/lib/Site2/Modules';
 use Sessionid;
 
 my $string = 'test@test.com';
-
+my $str2 = '日本語などのダブルバイト文字列';
 
 subtest 'word method' => sub {
     my $obj = Sessionid->new($string);
@@ -31,12 +31,14 @@ subtest 'uid' => sub {
 };
 
 subtest 'guid' => sub {
-    my $obj = Sessionid->new($string);
+	#my $obj = Sessionid->new($string);
+    my $obj = Sessionid->new($str2);
     my $guid = $obj->guid;
     print "GUID: $guid \n";
 
     #比較用
-    my $obj2 = Sessionid->new($string);
+    #my $obj2 = Sessionid->new($string);
+    my $obj2 = Sessionid->new($str2);
     my $guid2 = $obj2->guid;
     print "GUID2: $guid2 \n";
 

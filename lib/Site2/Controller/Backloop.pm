@@ -164,16 +164,25 @@ sub signaling {
 
 			 if ( $jsonobj->{type} eq "makechatroom" ) {
                              # チャットルームの作成
-			    
+
+			     my $sobj = Sessionid->new($jsonobj->{roomname});
+			     $self->app->log->info("DEBUG: 通過 ");
+			     my $chatroomnamehash = $sobj->guid;
+
                              my $userdata = { "user" => $jsonobj->{user} ,
                                               "icon_url" => $jsonobj->{icon_url},
                                               "wsid" => $jsonobj->{wsid},
 					      "room" => $jsonobj->{roomname},
 					      "pubstat" => $jsonobj->{pubstat},
+					      "roomnamehash" => $chatroomnamehash,
 				            };
 			     my $userjson = to_json($userdata);
 
-                             $redis->db->hset("ENTRY$jsonobj->{pubstat}$jsonobj->{roomname}", $jsonobj->{wsid} , $userjson);
+			     #$redis->db->hset("ENTRY$jsonobj->{pubstat}$jsonobj->{roomname}", $jsonobj->{wsid} , $userjson);
+                             $redis->db->hset("ENTRY$jsonobj->{pubstat}$chatroomnamehash", $jsonobj->{wsid} , $userjson);
+
+			        $userdata->{type} = "makechatroomact";
+				$clients->{$wsid}->send({json => $userdata}); # hashを自分に返信
 
 			     return;
 			 }
@@ -181,17 +190,24 @@ sub signaling {
 			 if ( $jsonobj->{type} eq "entrychatroom" ) {
                              # チャットルームへのエントリー
 			   $self->app->log->info("DEBUG: entrychatroom $jsonobj->{user}"); 
+
+			     my $chatroomnamehash = Sessionid->new($jsonobj->{roomname})->guid;
+
                              my $userdata = { "user" => $jsonobj->{user} ,
                                               "icon_url" => $jsonobj->{icon_url},
                                               "wsid" => $jsonobj->{wsid},
 					      "room" => $jsonobj->{roomname},
-					      "pubstat" => $jsonobj->{pubstat}
+					      "pubstat" => $jsonobj->{pubstat},
+					      "roomnamehash" => $chatroomnamehash,
 				            };
 			     my $userjson = to_json($userdata);
 
-                             $redis->db->hset("ENTRYpublic$jsonobj->{roomname}", $jsonobj->{wsid} , $userjson);
+			     #$redis->db->hset("ENTRYpublic$jsonobj->{roomname}", $jsonobj->{wsid} , $userjson);
+                             $redis->db->hset("ENTRYpublic$chatroomnamehash", $jsonobj->{wsid} , $userjson);
 
-			     my $mess = { "type" => "entrychatroomact"};
+			     my $mess = { "type" => "entrychatroomact" ,
+			                  "roomnamehash" => $chatroomnamehash ,
+			                };
 			     $clients->{$wsid}->send({ json => $mess });
 
 			     return;
@@ -232,9 +248,10 @@ sub signaling {
 			 if ( $jsonobj->{type} eq "getlist" ) {
                              # chatroomでメンバーを確認する
 
-                             $self->app->log->debug("DEBUG: key: ENTRY$jsonobj->{pubstat}$jsonobj->{roomname}");
+                             $self->app->log->debug("DEBUG: key: ENTRY$jsonobj->{pubstat}$jsonobj->{roomnamehash}   $jsonobj->{roomname}");
 
-			     my $res = $redis->db->hvals("ENTRY$jsonobj->{pubstat}$jsonobj->{roomname}");
+			     #my $res = $redis->db->hvals("ENTRY$jsonobj->{pubstat}$jsonobj->{roomname}");
+			     my $res = $redis->db->hvals("ENTRY$jsonobj->{pubstat}$jsonobj->{roomnamehash}");
 
 			     # $reshは配列の中身がテキストなので、バイナリに直す ブラウザ側での変換が1度で済む
 			     my $resp = [];
@@ -256,7 +273,8 @@ sub signaling {
 
 			 if ( $jsonobj->{type} eq "reloadmember" ){
                              #チャットのメンバーリストの再読込をメンバーに依頼する
-                             my $res = $redis->db->hkeys("ENTRY$jsonobj->{pubstat}$jsonobj->{roomname}");
+			     #my $res = $redis->db->hkeys("ENTRY$jsonobj->{pubstat}$jsonobj->{roomname}");
+                             my $res = $redis->db->hkeys("ENTRY$jsonobj->{pubstat}$jsonobj->{roomnamehash}");
 
 			     for my $i (@$res){
 				 if ( $i eq $wsid ) { next ; }  # 自分は除外
@@ -271,7 +289,8 @@ sub signaling {
 
 			 if ( $jsonobj->{type} eq "chatroomchat" ) {
 			     # cchatのメッセージが流れたとき
-                             my $res = $redis->db->hkeys("ENTRY$jsonobj->{pubstat}$jsonobj->{roomname}");
+			     #my $res = $redis->db->hkeys("ENTRY$jsonobj->{pubstat}$jsonobj->{roomname}");
+                             my $res = $redis->db->hkeys("ENTRY$jsonobj->{pubstat}$jsonobj->{roomnamehash}");
 			     my $debug = to_json($res);
 
 			     for my $i (@$res){
@@ -285,7 +304,8 @@ sub signaling {
 			 # type call以外、order responseはsendtoで送信される
 			 if ( $jsonobj->{type} eq "call" ) {
                              # webRTC用
-                             my $res = $redis->db->hkeys("ENTRY$jsonobj->{pubstat}$jsonobj->{roomname}");
+			     #my $res = $redis->db->hkeys("ENTRY$jsonobj->{pubstat}$jsonobj->{roomname}");
+                             my $res = $redis->db->hkeys("ENTRY$jsonobj->{pubstat}$jsonobj->{roomnamehash}");
 
 			     for my $i (@$res){
 				 if ( $i eq $wsid ) { next ; }  # 自分は除外
@@ -299,7 +319,8 @@ sub signaling {
 
 			 if ( $jsonobj->{type} eq "detachvoice"){
                              # hung up detachvoiceの転送
-                             my $res = $redis->db->hkeys("ENTRY$jsonobj->{pubstat}$jsonobj->{roomname}");
+			     #my $res = $redis->db->hkeys("ENTRY$jsonobj->{pubstat}$jsonobj->{roomname}");
+                             my $res = $redis->db->hkeys("ENTRY$jsonobj->{pubstat}$jsonobj->{roomnamehash}");
 			     my $debug = to_json($res);
 
 			     for my $i (@$res){
@@ -674,8 +695,9 @@ sub signaling {
 		       $self->app->log->debug("DEBUG: info: $info");
 		       if ( ! defined $info ){ next; }
 		          $info = from_json($info);
-		          $self->app->pg->db->query("delete from icondata where params->>'room' = ?" , "$info->{pubstat}$info->{room}" );
-			  $self->app->log->debug("DEBUG: delete pic $info->{pubstat} $info->{room}");
+			  #$self->app->pg->db->query("delete from icondata where params->>'room' = ?" , "$info->{pubstat}$info->{room}" );
+		          $self->app->pg->db->query("delete from icondata where params->>'room' = ?" , "$info->{pubstat}$info->{roomnamehash}" );
+			  $self->app->log->debug("DEBUG: delete pic $info->{pubstat} $info->{roomname}");
 		   }
 
 		   for my $key (@$res){
@@ -710,17 +732,17 @@ sub delclientwsid {
     my $redis ||= Mojo::Redis->new("redis://$redisserver");
 
     my $wsid = $self->param('wsid');
-    my $roomname = $self->param('roomname');
+    my $roomnamehash = $self->param('roomnamehash');
     my $pubstat = $self->param('pubstat');
 
-    if ((! defined $wsid ) || ( ! defined $roomname ) || ( ! defined $pubstat )){
+    if ((! defined $wsid ) || ( ! defined $roomnamehash ) || ( ! defined $pubstat )){
         $self->render( text => 'ok' , status => '200' );  # とりあえず終わらせる
         return;
     }
 
     $self->app->log->info("finish connection $wsid by client");
 
-    my $res = $redis->db->keys("ENTRY$pubstat$roomname");
+    my $res = $redis->db->keys("ENTRY$pubstat$roomnamehash");
 
     for my $key (@$res){
         my $fields = $redis->db->hkeys($key);  # fieldをチェックして一致したら削除する
@@ -740,7 +762,7 @@ sub delclientwsid {
     $self->render( text => 'ok' , status => '200' );
 
     undef $wsid;
-    undef $roomname;
+    undef $roomnamehash;
     undef $pubstat;
     undef $redisserver;
     undef $redis;

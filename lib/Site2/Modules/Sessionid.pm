@@ -9,11 +9,15 @@ use warnings;
 use Digest::SHA3;
 #use Digest::MD5;
 use Time::HiRes qw ( time );
+use Encode qw(encode decode encode_utf8);
+use MIME::Base64 qw( encode_base64 decode_base64 );
 
 sub new {
     my ($class,$args,$sid) = @_;
     #引数なくてもとりあえずok
     srand();
+
+    $args = encode_utf8($args);
 
     return bless { word => $args, sid => $sid } ,$class;
 }
@@ -51,8 +55,11 @@ sub uid {
 sub guid {
     my $self = shift;
 
+    my $base64word = encode_base64($self->word);
+
     my $sha3 = Digest::SHA3->new();
-       $sha3->add($self->word);
+    #$sha3->add($self->word);
+       $sha3->add($base64word);
     my $guid = $sha3->hexdigest;
     return $guid;
 

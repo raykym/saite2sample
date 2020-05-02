@@ -217,8 +217,9 @@ function sendcall(){
     // call others, in same room
     console.log("call others in same room, befeore offer");
     var typecall = JSON.stringify({"type":"call",
-	                           "from" : sessionStorage.wsidi,
+	                           "from" : sessionStorage.wsid,
                                    "roomname" : chatRoomInfo.roomname ,
+                                   "roomnamehash" : chatRoomInfo.roomnamehash ,
 	                           "pubstat" : chatRoomInfo.pubstat
                                  });
     console.log("typecall:" + typecall);

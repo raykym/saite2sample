@@ -24,4 +24,10 @@ subtest '$str' => sub {
     isa_ok $obj, 'Sessionid';
 };
 
+subtest '$str duble byte data' => sub {
+    my $str = '日本語の文字列';
+    my $obj = Sessionid->new($str);
+    isa_ok $obj, 'Sessionid';
+};
+
 done_testing;

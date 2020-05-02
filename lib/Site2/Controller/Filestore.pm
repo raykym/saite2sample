@@ -186,6 +186,7 @@ sub fileupload {
 
        my $wsid = $self->param('wsid');
        my $roomname = $self->param('roomname');
+       my $roomnamehash = $self->param('roomnamehash');
        my $pubstat = $self->param('pubstat');
        my $option = $self->param('option');
        if ( ! defined $option ) {
@@ -200,7 +201,7 @@ sub fileupload {
        my $oid = Sessionid->new($wsid)->uid;
        my $checkdate = DateTime->now();
 
-       my $params = { "filename" => $filename , "mime" => $mimetype , "checkdate" => $checkdate , "room" => "$pubstat$roomname" , "option" => $option };
+       my $params = { "filename" => $filename , "mime" => $mimetype , "checkdate" => $checkdate , "room" => "$pubstat$roomnamehash" , "roomname" => $roomname , "option" => $option };
        my $paramjson = to_json($params);
 
            {
