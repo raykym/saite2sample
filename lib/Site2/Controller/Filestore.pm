@@ -216,7 +216,7 @@ sub fileupload {
 		  undef $sth_uploadfile;
            }
 
-         my $message = { "type" => "filenotice" , "sendto" => $wsid , "oid" => $oid , "mime" => $mimetype };
+         my $message = { "type" => "filenotice" , "sendto" => $wsid , "oid" => $oid , "mime" => $mimetype , "filename" => $filename };
          my $jsontxt = to_json($message);
 
             $self->app->pg->pubsub->notify( $wsid => $jsontxt );
@@ -292,13 +292,13 @@ sub fileout {
 	#   my $extention = $types->detect($params->{mime});
 	#   $self->render(data => $res->{data},format => $extention);
 
-    } elsif ( $params->{mime} =~ /mpeg|mpg|3gp|mp4|m4a|realtext|mp3|octet-stream|flac/){
+    } elsif ( $params->{mime} =~ /mpeg|mpg|3gp|mp4|m4a|realtext|mp3|flac/){
 
         my $extention = $types->detect($params->{mime});
 
            $self->render(data => $res->{data},format => $extention);
 
-    } elsif ( $params->{mime} =~ /pdf/ ){
+    } elsif ( $params->{mime} =~ /pdf|octet-stream/ ){
 
         my $extention = $types->detect($params->{mime});
 

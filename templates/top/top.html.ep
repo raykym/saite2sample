@@ -522,17 +522,19 @@ function wsCall(){
                        tagtext.tag = "<img width='350' higth='350' src=https://<%= $url_host %>/fileout?oid=" + tagtext.oid + "></img>";
                        divobj.innerHTML = "<h3>image check!(表示向きに問題なければ”post pic”）</h3>" + tagtext.tag;
 
-               } else if ( ~evt.mime.indexOf('mpeg') || ~evt.mime.indexOf('3gp') || ~evt.mime.indexOf('mp4') || ~evt.mime.indexOf('m4a') || ~evt.mime.indexOf('mpg') || ~evt.mime.indexOf('mp3') || ~evt.mime.indexOf('octet-stream') || ~evt.mime.indexOf('flac') ){
+               } else if ( ~evt.mime.indexOf('mpeg') || ~evt.mime.indexOf('3gp') || ~evt.mime.indexOf('mp4') || ~evt.mime.indexOf('m4a') || ~evt.mime.indexOf('mpg') || ~evt.mime.indexOf('mp3') || ~evt.mime.indexOf('flac') ){
                %# 動画
                        tagtext.oid = evt.oid;
                        tagtext.tag = "<video width='350' hight='350' controls src=https://<%= $url_host %>/fileout?oid=" + tagtext.oid +"></video>";
                        divobj.innerHTML = tagtext.tag;
 
-               } else if ( ~evt.mime.indexOf('pdf')) {
+               } else if ( ~evt.mime.indexOf('pdf') || ~evt.mime.indexOf('octet-stream') ) {
                %# pdf
                       tagtext.oid = evt.oid;
-                      tagtext.tag = "<object type='application/pdf' data=https://<%= $url_host %>/fileout?oid=" + tagtext.oid + "></object>";
+                      //tagtext.tag = "<object type='application/pdf' data=https://<%= $url_host %>/fileout?oid=" + tagtext.oid + "></object>";
+                      tagtext.tag = "<a href=https://<%= $url_host %>/fileout?oid=" + tagtext.oid + " download='" + evt.filename + "' >" + evt.filename + "ファイルをダウンロードします</a>";
                       divobj.innerHTML = tagtext.tag;
+
                }
 
                return;
@@ -1981,7 +1983,7 @@ testing with google chrome. <br>
 </div>
 
 <div class='menublock'>
-    <details>
+    <details id='menudetails'>
         <summary>Menu....</summary>
         <ul class='menuline'>
           <p>
@@ -2038,8 +2040,9 @@ QRcodeをスナップショットで保存してください。
     </form>
     <div id="chatroomleft">
         <p id='roomdisplay'></p>
-        <input type="text" id="roomname" placeholder="room...">
-        <h6><p>二人以上入室したら、callを押すと通話出来ます。hangupで切断、退室になります</p></h6>
+        <input type="text" id="roomname" placeholder="room..."> 
+        <h6><p>事前にroom名を決めて、入室してください。room名がキーワードとなります。<br>
+               二人以上入室したら、callを押すと通話出来ます。hangupで切断、退室になります</p></h6>
         <ul id="chatroommember" class='chatmem'></ul>
     </div>
     <div id="chatroomright">

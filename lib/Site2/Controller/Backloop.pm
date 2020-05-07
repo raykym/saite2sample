@@ -165,9 +165,7 @@ sub signaling {
 			 if ( $jsonobj->{type} eq "makechatroom" ) {
                              # チャットルームの作成
 
-			     my $sobj = Sessionid->new($jsonobj->{roomname});
-			     $self->app->log->info("DEBUG: 通過 ");
-			     my $chatroomnamehash = $sobj->guid;
+			     my $chatroomnamehash = Sessionid->new($jsonobj->{roomname})->guid;
 
                              my $userdata = { "user" => $jsonobj->{user} ,
                                               "icon_url" => $jsonobj->{icon_url},

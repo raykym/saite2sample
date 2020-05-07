@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html manifest="nocache">
+%#<html manifest="nocache">
+<html>
   <head>
   <meta name="googlebot" content="noindex" />
   <meta charset="UTF-8">
