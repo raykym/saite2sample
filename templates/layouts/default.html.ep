@@ -50,6 +50,17 @@
 	   .memlist {
                display: inline-block;
 	   }
+           .explainmessage {
+               color: blue;
+           }
+	   .fukidasi {
+               display: none;
+           }
+           .fukidasi:after {
+	   }
+	   .explainmessage:hover + .fukidasi {
+               display: block;
+	   }
 	   #gmap div {
 	      color: initial;
               background-color: initial; 
