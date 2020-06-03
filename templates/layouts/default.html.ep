@@ -50,14 +50,11 @@
 	   .memlist {
                display: inline-block;
 	   }
-           .explainmessage {
-               color: blue;
-           }
+       %#    .explainmessage {
+       %#    }
 	   .fukidasi {
                display: none;
            }
-           .fukidasi:after {
-	   }
 	   .explainmessage:hover + .fukidasi {
                display: block;
 	   }

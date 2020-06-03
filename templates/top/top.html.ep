@@ -1986,16 +1986,14 @@ testing with google chrome. <br>
     <details id='menudetails'>
         <summary>Menu....</summary>
         <ul class='menuline'>
-          <div>
-              <li><button style="color: #00ff00;" onclick="menuList.oChat_f();">Open Text Chat</button></li>
-          </div>
-          <div>
-              <li><button style="color: #00ff00;" onclick="menuList.croomList_f();">Chat room list</button></li>
-              <li><button style="color: #00ff00;" onclick="menuList.makeChatRoom_f();">WebRTC room start</button></li>
-          </div>
-          <div>
-              <li><button style="color: #00ff00;" onclick="menuList.walkworld_f();">Ghost in Map</button></li>
-          </div>
+          <li class='explainmessage'><button style="color: #00ff00;" onclick="menuList.oChat_f();">Open Text Chat</button></li>
+          <p class='fukidasi'>現在サイトに接続している全員にメッセージを送ります。</p>
+          <li class='explainmessage'><button style="color: #00ff00;" onclick="menuList.croomList_f();">Chat room list</button></li>
+          <p class='fukidasi'>publicチャットルームのルーム一覧です。ここから入れます。</p>
+          <li class='explainmessage'><button style="color: #00ff00;" onclick="menuList.makeChatRoom_f();">WebRTC room start</button></li>
+          <p class='fukidasi'>チャットルームを作る又は入ります。</p>
+          <li class='explainmessage'><button style="color: #00ff00;" onclick="menuList.walkworld_f();">Ghost in Map</button></li>
+          <p class='fukidasi'>map上にghostが現れます。追いかけてもよく、逃げても構いません。</p>
         %#    <li><button style="color: #00ff00;" onclick="menuList.orientation_f();">Device Orientation</button></li>
         %#    <li><button style="color: #00ff00;" onclick="menuList.motion_f();">Device Motion</button></li>
         %#    <li><button style="color: #00ff00;" onclick="menuList.pushMessage_f();">Push Message</button></li>
@@ -2042,7 +2040,8 @@ QRcodeをスナップショットで保存してください。
         <p id='roomdisplay'></p>
    %# CSSでhoverを設定して、inputタグをフォーカスすると説明が表示される
         <input type="text" id="roomname" class='explainmessage' placeholder="room..."> 
-        <p class='fukidasi'>room名がキーワードとなります。publicはroom listに表示されて誰でも入れます。<br>
+        <p class='fukidasi'>room名がキーワードとなります。入力後エンターを押して下さい。<br>
+               publicはroom listに表示されて誰でも入れます。<br>
                二人以上入室したら、callを押すと通話出来ます。hangupで切断、退室になります<br>
                privateではroom名を知っている人だけが入れます。推測又は重複でも入れてしまいます。</p>
         <ul id="chatroommember" class='chatmem'></ul>
