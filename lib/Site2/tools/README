@@ -6,7 +6,7 @@ clearTable.pl   postgresqlのテーブルメンテナンス用  常時起動　�
 
 npcuser_move.pl  walkwordのnpc動作用  常時起動　リーク対策分裂
 
-./npcuser_move.pl > dev/null 2>&1 &
+./npcuser_move.pl > /dev/null 2>&1 &
 
 trapevent.pl  walkworldのtrapeventを書き込む。またnpcからのメッセージを処理する 常時起動　リーク対策分裂
 

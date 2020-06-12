@@ -22,6 +22,7 @@ sub cicon {
      }
      $self->app->log->debug("DEBUG: char: $char ");
 
+  # Mojolicious::Typesの表現が変わっていた。。。
   use Mojolicious::Types;
   my $types = Mojolicious::Types->new;
 
@@ -36,6 +37,10 @@ sub cicon {
   my $c3 = int(rand(200))+55;
   my $color = $image->colorAllocate($c1,$c2,$c3);
 
+  if (! -f '/usr/share/fonts/truetype/fonts-japanese-mincho.ttf') {
+      $self->app->log->info("DEBUG: font not installed!!!");
+	  }
+
     # $image->stringFT($color,"/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",30,0,10,40,$char);
      $image->stringFT($color,"/usr/share/fonts/truetype/fonts-japanese-mincho.ttf",30,0,10,40,$char);
 
@@ -43,7 +48,10 @@ sub cicon {
 
   my $extention = $types->detect("image/jpeg");
 
-  $self->render(data => $image->jpeg(), format => $extention);
+  #for my $aaa (@$extention) {  $self->app->log->info("DEBUG: extention: $aaa")};
+  #$self->app->log->info("DEBUG: extention: @{$extention}[0]");
+
+  $self->render(data => $image->jpeg(), format => @{$extention}[0]);
 }
 
 # アイコン用画像受け入れ

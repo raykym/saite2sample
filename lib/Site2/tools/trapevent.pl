@@ -96,7 +96,7 @@ $cvp->recv;
     } else {
             # childprocess
 
-my $redis ||= Mojo::Redis->new("redis://10.140.0.10");
+my $redis ||= Mojo::Redis->new("redis://10.140.0.12");
 my $pubsub = Mojo::Pg::PubSub->new( pg => $pg );
 
 # ghostchat listen

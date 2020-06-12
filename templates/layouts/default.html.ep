@@ -54,7 +54,35 @@
        %#    }
 	   .fukidasi {
                display: none;
+               width: 200px;
+               position: absolute;
+             %#  position: relative;
+               top: 0;
+               left: 150px;
+               padding: 16px;
+               border-radius: 5px;
+             %#  background: #33cc99;
+               background: #000000;
+               color: #fff;
+               font-weight: bold;
            }
+          .fukidasi:after {
+               position: absolute;
+             %#  position: relative;
+               width: 0;
+               height: 0;
+               left: 0;
+               bottom: -19px;
+               margin-left: 10px;
+               border: solid transparent;
+             %#  border-color: rgba(51, 204, 153, 0);
+               border-color: rgba(0, 0, 0, 0);
+             %#  border-top-color: #33cc99;
+               border-top-color: #000000;
+               border-width: 10px;
+               pointer-events: none;
+               content: " ";
+          }
 	   .explainmessage:hover + .fukidasi {
                display: block;
 	   }
