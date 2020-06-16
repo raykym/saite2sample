@@ -31,6 +31,10 @@ sub signaling {
        undef $wsidsend;
        undef $wsidjson;
 
+       my $keycount = keys(%{$clients});
+       $self->app->log->info("DEBUG: clients: $keycount ");
+       undef $keycount;
+
        my $mess = { "type" => "checkuser" };
        my $messjson = to_json($mess);
        $clients->{$wsid}->send($messjson);
@@ -645,13 +649,8 @@ sub signaling {
                            return;
 		       }
 
-
-
                       # walkworldの末尾はreturnしない
 		   }  # if walkworld
-
-
-
 
 		   #下記のイベントを記録する (type以外) webRTCのorder responseは2重に登録されるかも
 		   {  

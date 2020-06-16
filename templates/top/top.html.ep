@@ -841,6 +841,22 @@ function wsCall(){
             return;
         }
 
+        %# burstwebsocketの受信
+        if ( evt.perftest === 'burstwebsocket' ){
+
+            evt.count = evt.count + 1;
+
+            document.getElementById('disp_burstwebsocket').innerHTML = "count: " + evt.count ;
+
+            if ( evt.count >= 10000 ) {
+                console.log("DEBUG: send burstwebsocket end!");
+                return;
+            }
+
+            ws.send(JSON.stringify(evt));
+
+        }
+
 
 
     } // on message
@@ -1568,6 +1584,22 @@ function subscribeUserToPush() {
   });
 }
 
+function burstSwitch() {
+
+      var mess = { "perftest" : "burstwebsocket" ,
+                   "count" : 0,
+                   "sendto" : sessionStorage.wsid ,
+                   "from" : sessionStorage.wsid 
+                 };
+     %# Backloop.pmでは独自の処理は無い、sendtoで戻る
+
+      // user_statの送信
+      var messjson = JSON.stringify(mess);
+      ws.send(messjson);
+      console.log("DEBUG: send burstwebsocket start");
+
+}
+
 /// menu list toggle
 var menuList = {};  // メニュー系トグル処理をまとめる
 
@@ -1946,6 +1978,17 @@ var menuList = {};  // メニュー系トグル処理をまとめる
         }
     }   
 
+    menuList.burstWebsocket = true;  // true = none , false = block
+    menuList.burstWebsocket_f = function(){
+        if (menuList.burstWebsocket){
+            menuList.burstWebsocket = false;
+            document.getElementById("burstwebsocket").style.display="block";  // 表示
+        } else {
+            menuList.burstWebsocket = true;
+            document.getElementById("burstwebsocket").style.display="none";   // 非表示
+        }
+    }   
+
 function testws(){
 
     ws.close();
@@ -1998,6 +2041,7 @@ testing with google chrome. <br>
         %#    <li><button style="color: #00ff00;" onclick="menuList.motion_f();">Device Motion</button></li>
         %#    <li><button style="color: #00ff00;" onclick="menuList.pushMessage_f();">Push Message</button></li>
         %#    <li><button style="color: #00ff00;" onclick="menuList.compasscalibration_f();">Compass Calibration</button></li>
+          <li><button style="color: #00ff00;" onclick="menuList.burstWebsocket_f();">burst websocket count</button></li>
         </ul>
     </details>
 </div>
@@ -2103,6 +2147,12 @@ QRcodeをスナップショットで保存してください。
 <div id='compasscalibration' style='display: none;'>
     <div>コンパスを較正する必要があります。機器を持って 8 の字に回してみてください。</div>
     <div id='disp_calibration'></div>
+</div>
+
+%# websocketを連続して送り、カウントする
+<div id='burstwebsocket' style='display: none;'>
+    <button style="color: #ff0000;" onclick="burstSwitch();">burst websocket</button>
+    <div id='disp_burstwebsocket'></div>
 </div>
 
 <div class="footer">

@@ -213,7 +213,7 @@ $cvp->recv;
     } else {
 	    # childprocess
 
-$redis ||= Mojo::Redis->new("redis://10.140.0.10");
+$redis ||= Mojo::Redis->new("redis://10.140.0.12");
 
 #$pubsub ||= Mojo::Pg::PubSub->new( pg => $pg );
 
