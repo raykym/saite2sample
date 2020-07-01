@@ -209,7 +209,7 @@ function wsCall(){
 
                   var liobj = document.createElement("li");
                       liobj.setAttribute("id" , "openchatout");
-                      liobj.innerHTML = "<img src=" + evt.icon_url + " > [" + evt.user + "] " + evt.text ;
+                      liobj.innerHTML = "<img alt=\"icon image\" src=" + evt.icon_url + " > [" + evt.user + "] " + evt.text ;
                   var ulobj = document.getElementById("openchatout");
 
                     //  ulobj.appendChild(liobj);
@@ -330,9 +330,9 @@ function wsCall(){
                  
                       // 自分用とそれ以外で表示を変える
                       if ( sessionStorage.wsid === resline.wsid ) {
-                          memberList.memberListObjs[resline.wsid].innerHTML = "<button class='memlist' id='btn" + resline.wsid + "' onclick='call();' style='color: #00ff00;'><img src=" + resline.icon_url + " > [" + resline.user + "] Call </button><form class='memlist' id=choi" + resline.wsid + "><input type='radio' name='vvchoi' value='audio' checked>audio</label><input type='radio' name='vvchoi' value='video'>video</label></form><button class='memlist' value='Change Camera' onclick='changecam();'>Change Camera</button><div id='div" + resline.wsid + "'></div>";
+                          memberList.memberListObjs[resline.wsid].innerHTML = "<button class='memlist' id='btn" + resline.wsid + "' onclick='call();' style='color: #00ff00;'><img alt=\"icon img\" src=" + resline.icon_url + " > [" + resline.user + "] Call </button><form class='memlist' id=choi" + resline.wsid + "><input type='radio' name='vvchoi' value='audio' checked>audio</label><input type='radio' name='vvchoi' value='video'>video</label></form><button class='memlist' value='Change Camera' onclick='changecam();'>Change Camera</button><div id='div" + resline.wsid + "'></div>";
                           } else {
-                          memberList.memberListObjs[resline.wsid].innerHTML = "<img src=" + resline.icon_url + " > [" + resline.user + "]<div id='div" + resline.wsid + "'></div>";
+                          memberList.memberListObjs[resline.wsid].innerHTML = "<img alt=\"icon img\" src=" + resline.icon_url + " > [" + resline.user + "]<div id='div" + resline.wsid + "'></div>";
                           }
                       var ulobj = document.getElementById("chatroommember");
 
@@ -384,7 +384,7 @@ function wsCall(){
                if ( evt.type === "chatroomchat" ){
                   var liobj = document.createElement("li");
                       liobj.setAttribute("id" , "chatroomout");
-                      liobj.innerHTML = "<img src=" + evt.icon_url + " > [" + evt.user + "] " + evt.text ;
+                      liobj.innerHTML = "<img alt=\"icon img\" src=" + evt.icon_url + " > [" + evt.user + "] " + evt.text ;
                   var ulobj = document.getElementById("chatroomout");
 
                       ulobj.insertBefore(liobj,ulobj.firstChild);
@@ -519,7 +519,7 @@ function wsCall(){
                if ( ~evt.mime.indexOf('jpg') || ~evt.mime.indexOf('jpeg') || ~evt.mime.indexOf('png') || ~evt.mime.indexOf('gif') ){
                %# 画像
                        tagtext.oid = evt.oid;
-                       tagtext.tag = "<img width='350' higth='350' src=https://<%= $url_host %>/fileout?oid=" + tagtext.oid + "></img>";
+                       tagtext.tag = "<img alt=\"image data\" width='350' higth='350' src=https://<%= $url_host %>/fileout?oid=" + tagtext.oid + "></img>";
                        divobj.innerHTML = "<h3>image check!(表示向きに問題なければ”post pic”）</h3>" + tagtext.tag;
 
                } else if ( ~evt.mime.indexOf('mpeg') || ~evt.mime.indexOf('3gp') || ~evt.mime.indexOf('mp4') || ~evt.mime.indexOf('m4a') || ~evt.mime.indexOf('mpg') || ~evt.mime.indexOf('mp3') || ~evt.mime.indexOf('flac') ){
@@ -855,6 +855,7 @@ function wsCall(){
 
             ws.send(JSON.stringify(evt));
 
+            return;
         }
 
 
@@ -1022,7 +1023,7 @@ function call(){
         chatRoomInfo.callStat = "hangup";
 
         var btnobj = document.getElementById('btn' + sessionStorage.wsid);
-            btnobj.innerHTML = "<img src=" + localStorage.icon_url + " > [" + localStorage.user + "] " + chatRoomInfo.callStat;
+            btnobj.innerHTML = "<img alt=\"icon img\" src=" + localStorage.icon_url + " > [" + localStorage.user + "] " + chatRoomInfo.callStat;
 
         console.log("Call start!");
 
@@ -1032,7 +1033,7 @@ function call(){
 
         chatRoomInfo.callStat = "call";
         var btnobj = document.getElementById('btn' + sessionStorage.wsid);
-            btnobj.innerHTML = "<img src=" + localStorage.icon_url + " > [" + localStorage.user + "] " + chatRoomInfo.callStat;
+            btnobj.innerHTML = "<img alt=\"icon img\" src=" + localStorage.icon_url + " > [" + localStorage.user + "] " + chatRoomInfo.callStat;
 
         console.log("hung up!");
 
@@ -1213,7 +1214,7 @@ function picture_rotate(){
     var oid = tagtext.oid;
 
     var divobj = document.getElementById('picchat-img');
-        tagtext.tag = "<img width='350' higth='350' src=https://<%= $url_host %>/fileout?oid=" + tagtext.oid + "&oriented=" + list[pos] + "></img>";
+        tagtext.tag = "<img alt=\"image rotate\" width='350' higth='350' src=https://<%= $url_host %>/fileout?oid=" + tagtext.oid + "&oriented=" + list[pos] + "></img>";
         divobj.innerHTML = "<h3>image check!</h3>" + tagtext.tag;
 
     pos = ++pos;
@@ -2013,14 +2014,22 @@ window.onload = function(){
 
 <div id='toppage'>
 <headder>
-Fullmesh WebRTC chat room. <br>
+<div class='explainmessage'>Fullmesh WebRTC chat room. </div>
+<p class='fukidasi'>
+サイト変更するときなど不定期に停止することが在ります。<br>
+<br>
+トップページにアクセスすると、guestとして登録されます。<br>
+ユーザー情報はブラウザにのみ登録されるので、ブラウザのサイト設定からwestwind.backbone.siteを削除すると全て消せます。<br>
+<br>
+このサイトの利用に関して保証は何も在りません。<br>
+</p>
 testing with google chrome. <br>
-<a href="/explain">site explain</a><br>
+%#<a href="/explain">site explain</a><br>
 </headder>
 <button style="color: #00ff00;" onclick="menuList.uInfo_f();">User Infomation.<br></button>
 <div id='uInfo' class='userinfo' style="display: block"> 
     <div id='nowdate'></div>
-    icon: <a onclick="menuList.iconToggle_f();"><img id='uicon'></img></a>
+    icon: <a onclick="menuList.iconToggle_f();"><img alt='icon img' id='uicon'></img></a>
     user name: <input type='button' id='user' onclick="changeuser()" >
     <button style="color: #00ff00;" onclick="menuList.accTakeOver_f();">Account Take Over</button>
 </div>
@@ -2041,7 +2050,7 @@ testing with google chrome. <br>
         %#    <li><button style="color: #00ff00;" onclick="menuList.motion_f();">Device Motion</button></li>
         %#    <li><button style="color: #00ff00;" onclick="menuList.pushMessage_f();">Push Message</button></li>
         %#    <li><button style="color: #00ff00;" onclick="menuList.compasscalibration_f();">Compass Calibration</button></li>
-          <li><button style="color: #00ff00;" onclick="menuList.burstWebsocket_f();">burst websocket count</button></li>
+        %#  <li><button style="color: #00ff00;" onclick="menuList.burstWebsocket_f();">burst websocket count</button></li>
         </ul>
     </details>
 </div>
@@ -2112,7 +2121,7 @@ QRcodeをスナップショットで保存してください。
     Ghost in map... <a href="" style="color: #ff0000;">(位置情報は共有されません)</a>
       <div id='iconrotate'>
           <div id='reng'></div>
-          <img src='https://<%= $url_host %>/geticon?oid=5ba7449dac3befd89f1462a79e5b60c3633b138414d005b6ef927dda' id='arrow'></img>
+          <img alt='arrow icon' src='https://<%= $url_host %>/geticon?oid=5ba7449dac3befd89f1462a79e5b60c3633b138414d005b6ef927dda' id='arrow'></img>
       </div>
       <div id="gmap" class="mapbase" style="width : 100%; height : 360px;"></div>
     <div class='menublock'>

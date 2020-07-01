@@ -13,7 +13,7 @@ sub startup {
                        listen => ['http://*:4200'],
                        accepts => 100000,
                        clients => 500,
-                       workers => 2,
+                       workers => 1,
                        proxy => 1,
                        });
 

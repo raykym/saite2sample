@@ -32,7 +32,7 @@ sub signaling {
        undef $wsidjson;
 
        my $keycount = keys(%{$clients});
-       $self->app->log->info("DEBUG: clients: $keycount ");
+       $self->app->log->info("DEBUG: clients: $keycount PID: $$");
        undef $keycount;
 
        my $mess = { "type" => "checkuser" };
@@ -161,6 +161,19 @@ sub signaling {
 
 			 if ( $jsonobj->{type} eq "openchat" ) {
 			     # openchatのメッセージが流れたとき
+
+			  if (0){ # block
+			     # site2 1プロセス当たり50セッションを超えると確立でスルーする。
+                             my $uCount = keys(%$clients);
+			     if ($uCount >= 50 ) {
+				 if ( int(rand(100)) < 51 ){
+                                     return;
+			         }
+				 # スルーされるとイベントが出る
+			     }
+			     undef $uCount;
+			   } # block
+
                              my $jsontxt = to_json($jsonobj);
                              $self->app->pg->pubsub->notify( "openchat" => $jsontxt );
                              return;
@@ -293,7 +306,7 @@ sub signaling {
 			     # cchatのメッセージが流れたとき
 			     #my $res = $redis->db->hkeys("ENTRY$jsonobj->{pubstat}$jsonobj->{roomname}");
                              my $res = $redis->db->hkeys("ENTRY$jsonobj->{pubstat}$jsonobj->{roomnamehash}");
-			     my $debug = to_json($res);
+			     #my $debug = to_json($res);
 
 			     for my $i (@$res){
                                  my $jsontxt = to_json($jsonobj);
