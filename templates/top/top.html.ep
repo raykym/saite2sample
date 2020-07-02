@@ -31,6 +31,41 @@
 
 // const starttime = performance.now();  // perf
 
+(function(){
+  var loca = location,  // minify時に縮小するための変数
+      host = loca.host, // minify時に縮小するための変数
+      consoleDomains = ['localhost', '127.0.0.1', 'test-domain.com' ]; // console結果を出力するドメイン名を指定（後方一致）
+  /**
+    * isConsole
+    * ここにConsole結果を出力する条件を記述する
+    */
+  function isConsole(){
+    if(loca.protocol==='file:')  // ローカルファイルを呼び出している場合は
+      return true;                // 　結果を表示する
+    var is = false;
+    consoleDomains.some(function(domain){
+      if(host.slice(-domain.length)===domain){
+        is = true;
+        return true;
+      }
+    });
+    return is;
+  }
+  for(var key in console){
+    if(typeof console[key] === 'function'){
+      override(key);
+    }
+  }
+  function override(key){
+    var proto = console[key];
+    console[key] = function(){
+      if(isConsole()){
+        proto.apply(this, arguments);
+      }
+    };
+  }
+})();
+
     var timerarray = [];
     var maintimerID = null;
 
