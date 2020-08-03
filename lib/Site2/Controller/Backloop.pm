@@ -665,6 +665,15 @@ sub signaling {
                       # walkworldの末尾はreturnしない
 		   }  # if walkworld
 
+                   if ($jsonobj->{deviceorient}){
+
+                       my $messjson = to_json($jsonobj);
+                       # 負荷軽減の為にwebsocketで直接返信
+                       $clients->{$wsid}->send($messjson);
+
+                       return;
+                   }
+
 		   #下記のイベントを記録する (type以外) webRTCのorder responseは2重に登録されるかも
 		   {  
 			$jsonobj->{datetime} = DateTime->now();

@@ -27,6 +27,8 @@
 <script type="text/javascript" src="https://maps.google.com/maps/api/js?key=AIzaSyBtLOrp4b2x0j71FcDb1Vn9topnZPTNtaM"></script>
 <script type="text/javascript" src="https://<%= $url_host %>/js/librtc.js"></script>
 
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/101/three.min.js"></script>
+
 <script type="text/javascript">
 
 // const starttime = performance.now();  // perf
@@ -34,7 +36,7 @@
 (function(){
   var loca = location,  // minify時に縮小するための変数
       host = loca.host, // minify時に縮小するための変数
-      consoleDomains = ['localhost', '127.0.0.1', 'test-domain.com' ]; // console結果を出力するドメイン名を指定（後方一致）
+      consoleDomains = ['localhost', '127.0.0.1', 'backbone.site' ]; // console結果を出力するドメイン名を指定（後方一致）
   /**
     * isConsole
     * ここにConsole結果を出力する条件を記述する
@@ -87,6 +89,7 @@ function loopstart(){
     var CrosTimer = null;
     var socket_wait = null;
     var ws = null;
+    var tws = null; // TEST local socket
 
     var tz = jstz.determine();
 
@@ -158,7 +161,7 @@ function wsCall(){
 
     ws.onopen = function(){
         console.log('Connection opened');
-        usercheck(); // window.onloadから移転	
+        usercheck(); // window.onloadから移転	イベント経由でusercheck2()につながる
         sendsession();
 
     };   // onopen
@@ -467,13 +470,13 @@ function wsCall(){
                if ( evt.type === "resobsoleteuid" ){
                        if (evt.res === "nonobsolete"){
                            console.log("DEBUG: nonobsolete...");
-                           usercheck2();
+                           usercheck2();  // 既存uid
                        } else if ( evt.res === "obsolete" ) {
                            console.log("DEBUG: obsolete...reset uid");
 
                            localStorage.clear(); // 全て削除
 
-                           usercheck2();
+                           usercheck2();   // 新規uidになる
                        }
                 return;
                }
@@ -893,11 +896,16 @@ function wsCall(){
             return;
         }
 
+       %# device orient netの受信
+       if ( evt.deviceorient ){
 
+            document.getElementById('disp_orientnet').innerHTML = "alpha: " + evt.alpha + " beta: " + evt.beta + " gamma: " + evt.gamma ;
+           return;
+       }
 
     } // on message
 
-// function eria!!!!
+// function erea!!!!
 
 function usercheck(){
     %# サーバー側への廃止アカウントのチェック
@@ -1089,7 +1097,7 @@ function call(){
        hangup().then(function(){
            window.location.reload();
        });
-    }
+    } 
 }
 
 
@@ -1507,6 +1515,19 @@ function deviceorientationHandler(event) {
 
       document.getElementById('disp_orient').innerHTML = " alpha: " + event.alpha + "<br> beta: " + event.beta + "<br> gamma: " + event.gamma ;
 
+if (0) {  // block
+    // net send data sendtoで戻る
+      var messorient = { "deviceorient" : "burst orient" ,
+                         "alpha" : event.alpha ,
+                         "beta" : event.beta ,
+                         "gamma" : event.gamma ,
+                         "sendto" : sessionStorage.wsid ,
+                         "from" : sessionStorage.wsid 
+                       };
+      var messorientjson = JSON.stringify(messorient);
+      ws.send(messorientjson);
+} // block
+
       user_stat.rundirect = Math.ceil(360 - event.alpha);
 
    %#   var arrowobj = document.getElementById('arrow');
@@ -1535,7 +1556,10 @@ function devicemotionHandler(event) {
 
         event.interval = 0;
 
+        var dt = Date.now();
+
         a = {
+        dt : dt,
         x : event.acceleration.x,
         y : event.acceleration.y,
         z : event.acceleration.z,
@@ -1547,7 +1571,9 @@ function devicemotionHandler(event) {
         gamma : event.rotationRate.gamma,
            };
 
-      document.getElementById('disp_motion').innerHTML = " x: " + a.x + "<br> y: " + a.y + "<br> z: " + a.z + "<br> gx: " + a.gx + "<br> gy: " + a.gy + "<br> gz: " + a.gz + "<br> alpha: " + a.alpha + "<br> beta: " + a.beta + "<br> gamma: " + a.gamma;
+      document.getElementById('disp_motion').innerHTML = "dt: " + a.dt + "<br> x: " + a.x + "<br> y: " + a.y + "<br> z: " + a.z + "<br> gx: " + a.gx + "<br> gy: " + a.gy + "<br> gz: " + a.gz + "<br> alpha: " + a.alpha + "<br> beta: " + a.beta + "<br> gamma: " + a.gamma;
+
+    //  document.getElementById('disp_threemotion').innerHTML = "x: " + a.x + " | " + a.gx + "<br> y: " + a.y + " | " + a.gy + "<br> z: " + a.z + " | " + a.gz + "<br> ";
 
 }
 
@@ -1635,6 +1661,111 @@ function burstSwitch() {
       console.log("DEBUG: send burstwebsocket start");
 
 }
+
+function threedum(){
+    return;
+}
+
+// var b = { x : 0 , y : 0 , z : 0 };
+
+function threeinit(){
+    const width = 300;
+    const hight = 300;
+
+    const renderer = new THREE.WebGLRenderer({
+        canvas: document.querySelector("#myCanvas") ,
+        preserveDrawingBuffer: true  //残像を残す
+        });
+
+    renderer.autoClearColor = false;   // 残像を残す
+
+    renderer.setSize(width,hight);
+
+    renderer.setPixelRatio(window.devicePixelRatio);
+
+    const scene = new THREE.Scene();
+
+    const camera = new THREE.PerspectiveCamera(
+        45,
+        width / hight,
+        1,
+        5000
+        );
+    camera.position.set(0,+500,0);
+    camera.lookAt(new THREE.Vector3(0,0,0));
+
+    const geometry = new THREE.BoxGeometry(10, 10, 10);
+
+    const material = new THREE.MeshStandardMaterial({
+        color: 0xff0000,
+        wireframe: true
+        });
+
+    const box = new THREE.Mesh(geometry, material);
+    scene.add(box);
+
+    const light = new THREE.DirectionalLight(0xffffff);
+
+    light.position.set(1, 1, 1);
+    scene.add(light);
+
+  %#  renderer.render(scene, camera);  // tick()に置き換え
+  tick();
+
+  function tick() {
+    requestAnimationFrame(tick);
+/*
+    b.x = b.x + a.x;
+    b.y = b.y + a.y;
+    b.z = b.z + a.z;
+*/
+    document.getElementById('disp_threemotion').innerHTML = "x: " + a.x + "<br> y: " + a.y + "<br> z: " + a.z;
+
+
+    // 箱を回転させる
+  //  box.rotation.x += 0.01;
+  //  box.rotation.y += 0.01;
+  //  box.rotation.z += 0.01;
+/*
+  if ( a.x > 0.1 ) {
+    box.rotation.x += (a.x/100);
+  }
+  if ( a.y > 0.1 ) {
+    box.rotation.y += (a.y/100);
+  }
+  if ( a.z > 0.1 ) {
+    box.rotation.z += (a.z/100);
+  }
+*/
+
+    box.position.x += a.x ;
+  //  box.position.y += a.y ;
+    box.position.z += a.z ;
+
+  //  camera.rotation.x += 0.01;
+  //  camera.rotation.y += 0.01;
+  //  camera.rotation.z += 0.01;
+
+/*
+  // 動くと残像が残り、止まると消える
+  if ( (a.x < 0.1 ) && (a.y < 0.1) && (a.z < 0.1)){
+    renderer.autoClearColor = true;   // 残像を消す
+  } else {
+    renderer.autoClearColor = false;   // 残像を残す
+  }
+*/
+
+    // レンダリング
+    renderer.render(scene, camera);
+  }
+
+}  // threeinit
+
+function getRandomInt(max) {
+  return Math.floor(Math.random() * Math.floor(max));
+}
+
+
 
 /// menu list toggle
 var menuList = {};  // メニュー系トグル処理をまとめる
@@ -2025,9 +2156,119 @@ var menuList = {};  // メニュー系トグル処理をまとめる
         }
     }   
 
-function testws(){
+    menuList.threetest = true;  // true = none , false = block
+    menuList.threetest_f = function(){
+        if (menuList.threetest){
+            menuList.threetest = false;
+            document.getElementById("threetest").style.display="block";  // 表示
 
+            window.addEventListener("devicemotion", devicemotionHandler, true);
+            window.addEventListener("DOMContentLoaded", threeinit());
+
+
+        } else {
+            menuList.threetest = true;
+            document.getElementById("threetest").style.display="none";   // 非表示
+
+            window.removeEventListener("DOMContentLoaded", threedum());
+            window.removeEventListener("deviceorientation", deviceorientationHandler, true);
+         //   b = { x : 0 , y : 0 , z : 0 };
+        }
+    }   
+
+
+function testws(){
     ws.close();
+}
+
+function reloadpage(){
+    var testhangup = function(){
+            return new Promise( function(resolv,reject){            
+            console.log("DEBUG: testhangup!!!");
+            resolv();
+         });
+       }
+       testhangup().then(function(){
+           window.location.reload();
+       });
+}
+
+%# local socket test
+%#    twsCall();
+
+function twsCall(){
+    tws = new WebSocket('ws://127.0.0.1:3000/wstest');
+    console.log(" TEST Websocket connect...");
+    return tws;
+}
+
+if ( tws != null ){
+    tws.onopen = function(){
+        console.log('TEST Connection opened');
+        var mess = { "TEST" : "MESSAGE" };
+        var messjson = JSON.stringify(mess);
+        tws.send(messjson);
+    };
+    tws.onclose = function(){
+        console.log("TEST WS Connection close... reconnect...");
+    };
+    tws.onerror = function(){
+       alert("TEST please Reload, Reconnect websocket!");
+    };
+    tws.onmessage = function(msg){
+                var evt = JSON.parse(msg.data);
+                console.log("DEBUG: TEST websocket: " + JSON.stringify(evt));
+        tws.close();
+    };
+} // if tws
+
+function callAdmin(){
+
+    menuList.makeChatRoom_f();
+
+    var element = document.getElementById('pubpri');
+    var radioNodeList = element.pubstat;
+    chatRoomInfo.pubstat = radioNodeList.value;
+    document.getElementById('roomname').value = "adminhook";
+    chatRoomInfo.roomname = document.getElementById('roomname').value;
+
+    var mess = {"type" : "makechatroom" ,
+                "roomname": chatRoomInfo.roomname ,
+                "user" : localStorage.user ,
+                "icon_url" : localStorage.icon_url ,
+                "wsid" : sessionStorage.wsid ,
+                "pubstat" : chatRoomInfo.pubstat
+               };
+    %# roomnamehashはまだない
+    var messjson = JSON.stringify(mess);
+        ws.send(messjson);
+        document.getElementById('roomname').value = "";
+        document.getElementById('roomdisplay').innerHTML = chatRoomInfo.pubstat + " " + chatRoomInfo.roomname ;
+        document.getElementById('cchat').focus(); 
+
+    var form_data = new FormData();
+        form_data.append("p" , sessionStorage.p );
+
+    var xhr = new XMLHttpRequest();
+
+        xhr.onload = function(e){
+            console.log(xhr.responseText);
+            %# レスポンスは確認のみ
+        }
+
+       xhr.onerror = function(e){
+           return; 
+       }
+
+       try {
+        xhr.open("post","https://<%= $url_host %>/adminhook");
+
+        xhr.send(form_data);
+       } catch(e) {
+           // dum
+           return;
+       }
+    return;
 }
 
 // main
@@ -2042,7 +2283,6 @@ window.onload = function(){
       document.getElementById('nowdate').innerHTML = new Date();
       }, 1000);
     timerarray.push(nowdate_id);
-
 }
 
 </script>
@@ -2061,10 +2301,11 @@ window.onload = function(){
 testing with google chrome. <br>
 %#<a href="/explain">site explain</a><br>
 </headder>
+
 <button style="color: #00ff00;" onclick="menuList.uInfo_f();">User Infomation.<br></button>
 <div id='uInfo' class='userinfo' style="display: block"> 
     <div id='nowdate'></div>
-    icon: <a onclick="menuList.iconToggle_f();"><img alt='icon img' id='uicon'></img></a>
+    icon: <a onclick="menuList.iconToggle_f();"><img alt='icon img' id='uicon' src="https://<%= $url_host %>/ciconimg?s="></img></a>
     user name: <input type='button' id='user' onclick="changeuser()" >
     <button style="color: #00ff00;" onclick="menuList.accTakeOver_f();">Account Take Over</button>
 </div>
@@ -2081,18 +2322,19 @@ testing with google chrome. <br>
           <p class='fukidasi'>チャットルームを作る又は入ります。</p>
           <li class='explainmessage'><button style="color: #00ff00;" onclick="menuList.walkworld_f();">Ghost in Map</button></li>
           <p class='fukidasi'>map上にghostが現れます。追いかけてもよく、逃げても構いません。</p>
-        %#    <li><button style="color: #00ff00;" onclick="menuList.orientation_f();">Device Orientation</button></li>
-        %#    <li><button style="color: #00ff00;" onclick="menuList.motion_f();">Device Motion</button></li>
+          <li><button style="color: #00ff00;" onclick="menuList.orientation_f();">Device Orientation</button></li>
+          <li><button style="color: #00ff00;" onclick="menuList.motion_f();">Device Motion</button></li>
         %#    <li><button style="color: #00ff00;" onclick="menuList.pushMessage_f();">Push Message</button></li>
         %#    <li><button style="color: #00ff00;" onclick="menuList.compasscalibration_f();">Compass Calibration</button></li>
-        %#  <li><button style="color: #00ff00;" onclick="menuList.burstWebsocket_f();">burst websocket count</button></li>
+          <li><button style="color: #00ff00;" onclick="menuList.burstWebsocket_f();">burst websocket count</button></li>
+          <li><button style="color: #00ff00;" onclick="menuList.threetest_f();">three.js test</button></li>
         </ul>
     </details>
 </div>
 
 %# iconupload block default dipslay: none
 <div id='iconupload' style="display: none;"> 
-Icon upload...(JPEG only)<br>
+Icon upload...(JPEG only max size 100M)<br>
     <form method="post" id="iconform" action="/iconupload" enctype="multipart/form-data" style="display: inline;">
        <input type="file" accept="*/*;capture=camera" name="filename" id="upfile" onchange=""> 
        <input type="button" value="upload" onclick="upform();">
@@ -2178,6 +2420,7 @@ QRcodeをスナップショットで保存してください。
 
 <div id='deviceorientation' style='display: none;'>
     <div id='disp_orient'></div>
+%#    <div id='disp_orientnet'></div>
 </div>
 
 <div id='devicemotion' style='display: none;'>
@@ -2195,14 +2438,21 @@ QRcodeをスナップショットで保存してください。
 
 %# websocketを連続して送り、カウントする
 <div id='burstwebsocket' style='display: none;'>
+    <button style="color: #ff0000;" onclick="reloadpage();">reload page</button>
     <button style="color: #ff0000;" onclick="burstSwitch();">burst websocket</button>
     <div id='disp_burstwebsocket'></div>
+</div>
+
+%# three.jsと加速度計の連携テスト
+<div id='threetest' style='display: none;'>
+    <div id='disp_threemotion'></div>
+    <canvas id='myCanvas'></canvas>
 </div>
 
 <div class="footer">
 <footer>
 <h6>
-    <52through+backbone at gmail.com>
+    <button  onclick="callAdmin()"><52through+backbone at gmail.com></button>
 </h6>
 </footer>
 </div>

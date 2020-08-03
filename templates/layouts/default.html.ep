@@ -12,7 +12,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"> 
   <title><%= title %></title>
        <style>
-            body { 
+            body {  
 		    color:white;
                     background-color:#000000;
     	   	    list-style-type: none;
@@ -51,8 +51,6 @@
 	   .memlist {
                display: inline-block;
 	   }
-       %#    .explainmessage {
-       %#    }
 	   .fukidasi {
                display: none;
                width: 200px;

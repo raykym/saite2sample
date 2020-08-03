@@ -12,8 +12,8 @@ sub startup {
   $self->config(hypnotoad=>{
                        listen => ['http://*:4200'],
                        accepts => 100000,
-                       clients => 500,
-                       workers => 1,
+                       clients => 150,
+                       workers => 2,
                        proxy => 1,
                        });
 
@@ -67,6 +67,8 @@ sub startup {
   $r->post('/obsoleteuid')->to('transferuser#uidobsolete');
 
   $r->post('/delclientwsid')->to('backloop#delclientwsid');
+
+  $r->post('/adminhook')->to('top#adminhook');
 
   # test
   $r->get('/imgchk')->to('filestore#imgchk');

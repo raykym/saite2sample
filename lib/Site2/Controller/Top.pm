@@ -8,6 +8,9 @@ use Inputchk;
 
 use HTML::Barcode::QRCode;
 
+use Mojo::UserAgent;
+
+
 sub top {
   my $self = shift;
 
@@ -49,6 +52,22 @@ sub explain {
     my $self = shift;
 
     $self->render();
+}
+
+sub adminhook {
+    my $self = shift;
+
+    my $param = $self->param("p");
+    if ( !defined $param ){
+        $self->render( text => "error on" );
+        return;
+    }
+
+    my $ua = Mojo::UserAgent->new;
+
+    $ua->post("https://maker.ifttt.com/trigger/webhook/with/key/8oVxZGi0ZloYzuJZc-kfI");
+
+    $self->render( text => "" );
 }
 
 1;
