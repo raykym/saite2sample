@@ -2,7 +2,7 @@
 %#<html manifest="nocache">
 <html lang=ja>
   <head>
-  <meta name="Description" content="Test WebRTC chat site">
+  <meta name="Description" content="Test site">
   <meta name="googlebot" content="noindex" />
   <meta charset="UTF-8">
   <link rel="manifest" href="/manifest.json">

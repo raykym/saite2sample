@@ -305,6 +305,8 @@ function wsCall(){
  
                                               chatRoomInfo.roomname = this.value; 
                                               chatRoomInfo.pubstat = "public";
+
+                                              menuList.croomList_f();
                                               };
 
                        var roomdiv = document.getElementById("roomlistout");
@@ -563,7 +565,8 @@ function wsCall(){
                } else if ( ~evt.mime.indexOf('mpeg') || ~evt.mime.indexOf('3gp') || ~evt.mime.indexOf('mp4') || ~evt.mime.indexOf('m4a') || ~evt.mime.indexOf('mpg') || ~evt.mime.indexOf('mp3') || ~evt.mime.indexOf('flac') ){
                %# 動画
                        tagtext.oid = evt.oid;
-                       tagtext.tag = "<video width='350' hight='350' controls src=https://<%= $url_host %>/fileout?oid=" + tagtext.oid +"></video>";
+                     %#  tagtext.tag = "<video width='350' hight='350' controls src=https://<%= $url_host %>/fileout?oid=" + tagtext.oid +"></video>";
+                       tagtext.tag = "<video controls src=https://<%= $url_host %>/fileout?oid=" + tagtext.oid +"></video>";
                        divobj.innerHTML = tagtext.tag;
 
                } else if ( ~evt.mime.indexOf('pdf') || ~evt.mime.indexOf('octet-stream') ) {
@@ -2229,7 +2232,7 @@ function callAdmin(){
     var element = document.getElementById('pubpri');
     var radioNodeList = element.pubstat;
     chatRoomInfo.pubstat = radioNodeList.value;
-    document.getElementById('roomname').value = "adminhook";
+    document.getElementById('roomname').value = "Call_admin_wait_a_minute";
     chatRoomInfo.roomname = document.getElementById('roomname').value;
 
     var mess = {"type" : "makechatroom" ,
@@ -2289,7 +2292,7 @@ window.onload = function(){
 
 <div id='toppage'>
 <headder>
-<div class='explainmessage'>Fullmesh WebRTC chat room. </div>
+<div class='explainmessage'>Testing site</div>
 <p class='fukidasi'>
 サイト変更するときなど不定期に停止することが在ります。<br>
 <br>
@@ -2298,8 +2301,6 @@ window.onload = function(){
 <br>
 このサイトの利用に関して保証は何も在りません。<br>
 </p>
-testing with google chrome. <br>
-%#<a href="/explain">site explain</a><br>
 </headder>
 
 <button style="color: #00ff00;" onclick="menuList.uInfo_f();">User Infomation.<br></button>
@@ -2452,7 +2453,9 @@ QRcodeをスナップショットで保存してください。
 <div class="footer">
 <footer>
 <h6>
-    <button  onclick="callAdmin()"><52through+backbone at gmail.com></button>
+    contact: 
+    <button class='explainmessage' onclick='callAdmin()'><52through+backbone at gmail.com></button>
+    <p class='fukidasi'> Call admin user in Chatroom </p>
 </h6>
 </footer>
 </div>
