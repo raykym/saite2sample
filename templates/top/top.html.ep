@@ -464,6 +464,7 @@ function wsCall(){
                    menuList.makeChatRoomToggle = false;
                    document.getElementById("makechatroom").style.display="block";  // 表示
                    document.getElementById('roomdisplay').innerHTML = chatRoomInfo.roomname ;
+                   document.getElementById('roomname').disabled = "true";
 
                    return;
                }
@@ -1873,9 +1874,10 @@ var menuList = {};  // メニュー系トグル処理をまとめる
                         %# roomnamehashはまだない
                         var messjson = JSON.stringify(mess);
                         ws.send(messjson);
-                        document.getElementById('roomname').value = "";
+                   %#     document.getElementById('roomname').value = "";
                         document.getElementById('roomdisplay').innerHTML = chatRoomInfo.pubstat + " " + chatRoomInfo.roomname ;
                         document.getElementById('cchat').focus();
+                        document.getElementById('roomname').disabled = "true";
 
                   %# roomnamehashに変わったので、位置を変える
                   %#  member();
@@ -2245,9 +2247,10 @@ function callAdmin(){
     %# roomnamehashはまだない
     var messjson = JSON.stringify(mess);
         ws.send(messjson);
-        document.getElementById('roomname').value = "";
+     %#   document.getElementById('roomname').value = "";
         document.getElementById('roomdisplay').innerHTML = chatRoomInfo.pubstat + " " + chatRoomInfo.roomname ;
         document.getElementById('cchat').focus(); 
+        document.getElementById('roomname').disabled = "true";
 
     var form_data = new FormData();
         form_data.append("p" , sessionStorage.p );
