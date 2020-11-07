@@ -2320,12 +2320,15 @@ window.onload = function(){
         <ul class='menuline'>
           <li class='explainmessage'><button style="color: #00ff00;" onclick="menuList.oChat_f();">Open Text Chat</button></li>
           <p class='fukidasi'>現在サイトに接続している全員にメッセージを送ります。</p>
+          <p>--- Chat room ---</p>
           <li class='explainmessage'><button style="color: #00ff00;" onclick="menuList.croomList_f();">Chat room list</button></li>
           <p class='fukidasi'>publicチャットルームのルーム一覧です。ここから入れます。</p>
           <li class='explainmessage'><button style="color: #00ff00;" onclick="menuList.makeChatRoom_f();">WebRTC room start</button></li>
           <p class='fukidasi'>チャットルームを作る又は入ります。</p>
+          <p>--- map ---</p>
           <li class='explainmessage'><button style="color: #00ff00;" onclick="menuList.walkworld_f();">Ghost in Map</button></li>
           <p class='fukidasi'>map上にghostが現れます。追いかけてもよく、逃げても構いません。</p>
+          <p>--- Test ---</p>
           <li><button style="color: #00ff00;" onclick="menuList.orientation_f();">Device Orientation</button></li>
           <li><button style="color: #00ff00;" onclick="menuList.motion_f();">Device Motion</button></li>
         %#    <li><button style="color: #00ff00;" onclick="menuList.pushMessage_f();">Push Message</button></li>

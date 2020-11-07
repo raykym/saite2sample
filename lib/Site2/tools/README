@@ -1,5 +1,13 @@
 メモ
 
+./subprocsite2.pl stat  状態確認
+
+./subprocsite2.pl start 起動中なら停止して、再起動する。
+
+./subprocsite2.pl stop サブプロセスを停止する
+
+----
+
 clearTable.pl   postgresqlのテーブルメンテナンス用  常時起動　リーク対策分裂
 
 ./clearTable.pl > /dev/null 2>&1 &
