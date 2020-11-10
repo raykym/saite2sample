@@ -83,10 +83,11 @@ function loopstart(){
             var fn = timerarray.shift();
                 fn;
                 timerarray.push(fn);  // 再度戻す
-        },1000); // 1sec
+        },500); // 500msec
 }
 
     var CrosTimer = null;
+    var messTimer = null;
     var socket_wait = null;
     var ws = null;
     var tws = null; // TEST local socket
@@ -252,6 +253,21 @@ function wsCall(){
 
                     //  ulobj.appendChild(liobj);
                       ulobj.insertBefore(liobj,ulobj.firstChild);
+                    //  show message aria
+                      document.getElementById("openchatmessage").innerHTML = "<img alt=\"icon image\" src=" + evt.icon_url + " > [" + evt.user + "] " + evt.text ; 
+
+                     // messTimerを削除して
+                     timerarray = timerarray.filter( function(e,i){
+                         if ( e !== messTimer){
+                             return e; 
+                         }
+                     });
+
+                      clearInterval(messTimer); // clearしてから
+                      messTimer = window.setInterval( function(){
+                          document.getElementById("openchatmessage").innerHTML = ""; 
+                      },10000);  //10sec
+                      timerarray.push(messTimer);
 
                   return;
                }
@@ -2355,6 +2371,8 @@ QRcodeをスナップショットで保存してください。
 アカウントを移動したいブラウザで開くことでアカウントを移動します。
 <div id='takeoverajaxpostdata' ></div>
 </div>
+
+<div id='openchatmessage'></div>
 
 <div id='openchat' style="display: none;">
     <div><h3>Open Infomation<h3></div>
