@@ -1954,6 +1954,16 @@ my $t = AnyEvent->timer(
         } # for
     } # if
 
+
+    # hkeysで取得したidをループさせる
+    for my $i (@ghostids) {
+        &baseloop($i);
+    }
+    undef @ghostids;
+
+
+    if (0) { # subprocess bypass
+
     my $subprocess = Mojo::IOLoop::Subprocess->new;
 
     $subprocess->run(
@@ -1977,6 +1987,7 @@ my $t = AnyEvent->timer(
 	    }
      } 
     );  # subprocess
+    } # bypass
 
      my $elapsed = tv_interval($t0);
      my $disp = int($elapsed * 1000 );

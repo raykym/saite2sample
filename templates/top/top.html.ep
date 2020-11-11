@@ -83,7 +83,7 @@ function loopstart(){
             var fn = timerarray.shift();
                 fn;
                 timerarray.push(fn);  // 再度戻す
-        },500); // 500msec
+        },100); // 100msec
 }
 
     var CrosTimer = null;
@@ -253,7 +253,12 @@ function wsCall(){
 
                     //  ulobj.appendChild(liobj);
                       ulobj.insertBefore(liobj,ulobj.firstChild);
-                    //  show message aria
+                    //  show message aria 
+                      if (menuList.oChat){
+                          document.getElementById("openchatmessage").style.display="block";  // 表示
+                      } else {
+                          document.getElementById("openchatmessage").style.display="none";  // 非表示
+                      }
                       document.getElementById("openchatmessage").innerHTML = "<img alt=\"icon image\" src=" + evt.icon_url + " > [" + evt.user + "] " + evt.text ; 
 
                      // messTimerを削除して
@@ -266,6 +271,12 @@ function wsCall(){
                       clearInterval(messTimer); // clearしてから
                       messTimer = window.setInterval( function(){
                           document.getElementById("openchatmessage").innerHTML = ""; 
+                          // clearしたら削除
+                          timerarray = timerarray.filter( function(e,i){
+                              if ( e !== messTimer){
+                                 return e; 
+                              }
+                          });
                       },10000);  //10sec
                       timerarray.push(messTimer);
 
@@ -2026,6 +2037,17 @@ var menuList = {};  // メニュー系トグル処理をまとめる
                 clearInterval(CrosTimer);
                 CrosTimer = null;
             } //if CrosTimer
+
+            if ( messTimer !== null ){
+                     timerarray = timerarray.filter( function(e,i){
+                         if ( e !== messTimer){
+                             return e; 
+                         }
+                     });
+                clearInterval(messTimer);
+                messTimer = null;
+            } // if messTimer
+
            // statusの保存
            localStorage.user_stat = JSON.stringify(user_stat);
            sendsession(); //backloopにも書く
