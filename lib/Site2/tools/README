@@ -26,6 +26,6 @@ minion-npcuser.pl  20ユニット以上起動する場合のサブプロセス�
 
 minion-cmd.pl  minionの管理コマンド　statで状態を確認
 
+site2bot.pl   openchatにオウム返しと時報を流す
 
-
-
+./site2bot.pl /dev/null 2>&1 &

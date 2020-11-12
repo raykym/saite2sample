@@ -19,7 +19,7 @@ if ((! defined $ARGV[0] )||( $ARGV[0] eq "")) {
 
 my @chklist;
 
-my $subproclist = [ "clearTable.pl" , "npcuser_move.pl" , "trapevent.pl" , "minion-npcuser.pl" ];
+my $subproclist = [ "clearTable.pl" , "npcuser_move.pl" , "trapevent.pl" , "minion-npcuser.pl" , "site2bot.pl" ];
 
 sub procCheck {
     my @chklist;
