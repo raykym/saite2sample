@@ -101,6 +101,8 @@ if ($ARGV[0] eq "start"){
             if ( $pchk->{cmndline} =~ /$p/ ) {
                 system("kill -TERM $pchk->{pid}");
 		print "$p stoped\n";
+	    } else {
+                print "$p No process!\n";
 	    }
 	}	
 	system("./$p > /dev/null 2>&1 &");

@@ -106,6 +106,10 @@ sub baseloop {
                                  my $obj->{text} = "$hour 時をお知らせします。";
 			            $obj->{tx} = $tx;
                                     sendmess($obj);
+
+				 undef $hour;
+				 undef $obj;
+				 undef $dt;
                                  }
 	    }); 
             my $sig = AnyEvent->signal(
@@ -115,6 +119,7 @@ sub baseloop {
                                       $uacv->send;  # timer loop stop 
 				      exit;
             });
+
 
                $tx->on(finish => sub {
                    my ($tx, $code, $reason) = @_;
