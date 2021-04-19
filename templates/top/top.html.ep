@@ -913,15 +913,21 @@ function wsCall(){
         %# burstwebsocketの受信
         if ( evt.perftest === 'burstwebsocket' ){
 
+            evt.bend = Date.now();
+
+            evt.turncount = evt.bend - evt.bstart; 
+
             evt.count = evt.count + 1;
 
-            document.getElementById('disp_burstwebsocket').innerHTML = "count: " + evt.count ;
+            %#document.getElementById('disp_burstwebsocket').innerHTML = "count: " + evt.count ;
+            document.getElementById('disp_burstwebsocket').innerHTML = "count: " + evt.count + " around trip: " + evt.turncount + " msec"
 
             if ( evt.count >= 10000 ) {
                 console.log("DEBUG: send burstwebsocket end!");
                 return;
             }
 
+            evt.bstart = Date.now();
             ws.send(JSON.stringify(evt));
 
             return;
