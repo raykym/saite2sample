@@ -317,7 +317,7 @@ function wsCall(){
                        }
                        %#---
 
-                  }); // mlist.foreach
+                  }); // mlist.filter
                   } else {  // mlist.length
                   %# setIntervalを止めるかチェックする
 

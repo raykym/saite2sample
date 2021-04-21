@@ -79,8 +79,8 @@ sub signaling {
               # pubsubを受信したら自分のwebsocketに送信 ->仕様変更
 	      #$clients->{$wsid}->send($payload);
 	      #
-	      $oc_rexists->{$wsid} = $redis->db->exists("openchat$wsid");
-	      if ($oc_rexists->{$wsid} == 0) {
+	      $oc_rexists->{$wsid}->{exists} = $redis->db->exists("openchat$wsid");
+	      if ($oc_rexists->{$wsid}->{exists} == 0) {
 
                   $redis->db->rpush("openchat$wsid", $payload);
 		  $redis->db->expire("openchat$wsid", 60 );
@@ -204,23 +204,23 @@ sub signaling {
 
                          if ( $jsonobj->{type} eq "openchatget" ) {
 
-		             my $llen = $redis->db->llen("openchat$wsid");
+		             $oc_rexists->{$wsid}->{llen} = $redis->db->llen("openchat$wsid");
 			     #$data = $redis->db->lrange("openchat$wsid",0,$llen);
-			     my $data = [];
+			     $oc_rexists->{$wsid}->{data} = [];
 
-			     for (my $i = 1; $i <= $llen; $i++){
-                                  push(@{$data}, $redis->db->lpop("openchat$wsid")); 
+			     for (my $i = 1; $i <= $oc_rexists->{$wsid}->{llen}; $i++){
+                                  push(@{$oc_rexists->{$wsid}->{data}}, $redis->db->lpop("openchat$wsid")); 
 			     };
 			     #テキストが配列に入った状態
 
 			     my $mess = { "type" => 'openchat' ,
-				          "data" => $data 
+				          "data" => $oc_rexists->{$wsid}->{data} 
 				        };
 
 			     $clients->{$wsid}->send( { json => $mess });
 
-			     undef $llen;
-                             undef $data;
+			     delete $oc_rexists->{$wsid}->{llen};
+                             delete $oc_rexists->{$wsid}->{data};
 			     undef $mess;
 
 		             return;
