@@ -17,6 +17,7 @@ sub startup {
                        proxy => 1,
                        });
 
+
   # Load configuration from hash returned by config file
   my $config = $self->plugin('Config');
 #  my $redisserver = $self->app->config->{redisserver};

@@ -70,6 +70,11 @@
 
     var timerarray = [];
     var maintimerID = null;
+    var CrosTimer = null;
+    var messTimer = null;   // openchatの表示時間
+    var openChatTimer = null; //openchatの巡回タイマー	
+    var socket_wait = null;
+    var openChatNull_flg = 0;
 
     var gpsSetId = null;
 
@@ -86,9 +91,6 @@ function loopstart(){
         },100); // 100msec
 }
 
-    var CrosTimer = null;
-    var messTimer = null;
-    var socket_wait = null;
     var ws = null;
     var tws = null; // TEST local socket
 
@@ -242,13 +244,22 @@ function wsCall(){
 
                if ( evt.type === "openchat" ){
 
-                  var str = evt.text;
-                      evt.text = str.replace(/<("[^"]*"|'[^']*'|[^'">])*>/g, "");  // tag delete
-                      console.log("DEBUG: evt.text: " + evt.text);
+                  var mlist = evt.data;
+
+                  if ( mlist.length != 0 ) { 
+
+                  mlist.filter( function(element,i){
+
+                  var elem = JSON.parse(element);
+                  %# evtをelemで置き換えて、ループを成立させている
+
+                  var str = elem.text;
+                      elem.text = str.replace(/<("[^"]*"|'[^']*'|[^'">])*>/g, "");  // tag delete
+                      console.log("DEBUG: elem.text: " + elem.text );
 
                   var liobj = document.createElement("li");
                       liobj.setAttribute("id" , "openchatout");
-                      liobj.innerHTML = "<img alt=\"icon image\" src=" + evt.icon_url + " > [" + evt.user + "] " + evt.text ;
+                      liobj.innerHTML = "<img alt=\"icon image\" src=" + elem.icon_url + " > [" + elem.user + "] " + elem.text ;
                   var ulobj = document.getElementById("openchatout");
 
                     //  ulobj.appendChild(liobj);
@@ -259,7 +270,7 @@ function wsCall(){
                       } else {
                           document.getElementById("openchatmessage").style.display="none";  // 非表示
                       }
-                      document.getElementById("openchatmessage").innerHTML = "<img alt=\"icon image\" src=" + evt.icon_url + " > [" + evt.user + "] " + evt.text ; 
+                      document.getElementById("openchatmessage").innerHTML = "<img alt=\"icon image\" src=" + elem.icon_url + " > [" + elem.user + "] " + elem.text ; 
 
                      // messTimerを削除して
                      timerarray = timerarray.filter( function(e,i){
@@ -280,7 +291,71 @@ function wsCall(){
                       },10000);  //10sec
                       timerarray.push(messTimer);
 
+
+                      %# burstwebsocketの受信
+                      if ( elem.perftest === 'burstwebsocket' && elem.from === sessionStorage.wsid ){
+
+                          console.log("DEBUG: burstcount: " + elem.count); 
+
+                          elem.bend = Date.now();
+                          elem.turncount = elem.bend - elem.bstart; 
+                          elem.count = elem.count + 1;
+
+                          %#document.getElementById('disp_burstwebsocket').innerHTML = "count: " + elem.count ;
+                          document.getElementById('disp_burstwebsocket').innerHTML = "count: " + elem.count + " around trip: " + elem.turncount + " msec"
+
+                          if ( elem.count >= 10000 ) {
+                              console.log("DEBUG: send burstwebsocket end!");
+                              return;
+                          }
+
+                          elem.bstart = Date.now();
+                          ws.send(JSON.stringify(elem));
+                          console.log("DEBUG: send JSON burst message!");
+
+                          %#return; 
+                       }
+                       %#---
+
+                  }); // mlist.foreach
+                  } else {  // mlist.length
+                  %# setIntervalを止めるかチェックする
+
+                      openChatNull_flg++;
+
+                      if (openChatNull_flg >= 12) {
+
+                          clearInterval(openChatTimer); // clearしてから
+                          timerarray = timerarray.filter( function(e,i){
+                              if ( e !== openChatTimer){
+                                 return e; 
+                              }
+                          });
+
+                          openChatNull_flg = 0;
+                      }; // if openChatNull_flg 
+
+                  }; // mlist.length
+
                   return;
+               }
+
+               if ( evt.type === "openchatexists" ) {
+
+                   openChatTimer = window.setInterval( function() {
+
+                       var mess = { "type" : "openchatget" ,
+                                    "from" : sessionStorage.wsid
+                                  }; 
+                       var messjson = JSON.stringify(mess);
+                       ws.send(messjson);
+                     //  console.log("DEBUG: send openchatexists event");
+
+                       },5000); // 5sec
+
+                   timerarray.push(openChatTimer);
+
+                   return;
                }
 
                if ( evt.type === "makechatroomact" ) {
@@ -906,29 +981,6 @@ function wsCall(){
                        }; 
 
             ws.send(JSON.stringify(mess));
-
-            return;
-        }
-
-        %# burstwebsocketの受信
-        if ( evt.perftest === 'burstwebsocket' ){
-
-            evt.bend = Date.now();
-
-            evt.turncount = evt.bend - evt.bstart; 
-
-            evt.count = evt.count + 1;
-
-            %#document.getElementById('disp_burstwebsocket').innerHTML = "count: " + evt.count ;
-            document.getElementById('disp_burstwebsocket').innerHTML = "count: " + evt.count + " around trip: " + evt.turncount + " msec"
-
-            if ( evt.count >= 10000 ) {
-                console.log("DEBUG: send burstwebsocket end!");
-                return;
-            }
-
-            evt.bstart = Date.now();
-            ws.send(JSON.stringify(evt));
 
             return;
         }
@@ -1687,8 +1739,12 @@ function burstSwitch() {
 
       var mess = { "perftest" : "burstwebsocket" ,
                    "count" : 0,
+                   "type" : "openchat",
+                   "text" : "dummy test text!", 
+                   "from" : sessionStorage.wsid ,
                    "sendto" : sessionStorage.wsid ,
-                   "from" : sessionStorage.wsid 
+                   "user" : localStorage.user ,
+                   "icon_url" : localStorage.icon_url
                  };
      %# Backloop.pmでは独自の処理は無い、sendtoで戻る
 

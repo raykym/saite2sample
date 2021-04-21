@@ -14,7 +14,7 @@ my $clients = {};
 my $stream_io = {};
 my $pubsub_cb = {};
 my $stream = {};
-
+my $oc_rexists = {};
 
 sub signaling {
     my $self = shift;
@@ -67,18 +67,40 @@ sub signaling {
               $clients->{$wsid}->send($payload);
           });
 
-    # openchat listen
-       my $cb = $self->app->pg->pubsub->listen( "openchat" => sub {
-              my ($pubsub, $payload) = @_;
-
-              # pubsubを受信したら自分のwebsocketに送信
-              $clients->{$wsid}->send($payload);
-          });
-
     # redis setup
         my $redisserver = $self->app->config->{redisserver};
       #my $redis ||= Mojo::Redis->new("redis://10.140.0.8");
         my $redis ||= Mojo::Redis->new("redis://$redisserver");
+
+    # openchat listen
+       my $cb = $self->app->pg->pubsub->listen( "openchat" => sub {
+              my ($pubsub, $payload) = @_;
+
+              # pubsubを受信したら自分のwebsocketに送信 ->仕様変更
+	      #$clients->{$wsid}->send($payload);
+	      #
+	      $oc_rexists->{$wsid} = $redis->db->exists("openchat$wsid");
+	      if ($oc_rexists->{$wsid} == 0) {
+
+                  $redis->db->rpush("openchat$wsid", $payload);
+		  $redis->db->expire("openchat$wsid", 60 );
+
+		  # ブラウザに受信イベントを送信する
+                  my $mess = {"type" => "openchatexists",
+                              "sendto" => $wsid ,
+			     };
+		  $clients->{$wsid}->send({json => $mess});
+
+		  undef $mess;
+		  undef $messjson;
+
+	      } else {
+		  #書き込みのみ
+                  $redis->db->rpush("openchat$wsid", $payload);
+		  $redis->db->expire("openchat$wsid", 60 );
+	      }
+          });
+
 
 # サブルーチンエリア
     sub kmlatlng {
@@ -176,8 +198,36 @@ sub signaling {
 
                              my $jsontxt = to_json($jsonobj);
                              $self->app->pg->pubsub->notify( "openchat" => $jsontxt );
+
                              return;
 			 }
+
+                         if ( $jsonobj->{type} eq "openchatget" ) {
+
+		             my $llen = $redis->db->llen("openchat$wsid");
+			     #$data = $redis->db->lrange("openchat$wsid",0,$llen);
+			     my $data = [];
+
+			     for (my $i = 1; $i <= $llen; $i++){
+                                  push(@{$data}, $redis->db->lpop("openchat$wsid")); 
+			     };
+			     #テキストが配列に入った状態
+
+			     my $mess = { "type" => 'openchat' ,
+				          "data" => $data 
+				        };
+
+			     $clients->{$wsid}->send( { json => $mess });
+
+			     undef $llen;
+                             undef $data;
+			     undef $mess;
+
+		             return;
+                         }
+
+
+
 
 			 if ( $jsonobj->{type} eq "makechatroom" ) {
                              # チャットルームの作成
