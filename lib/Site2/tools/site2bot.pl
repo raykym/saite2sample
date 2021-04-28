@@ -133,12 +133,17 @@ sub baseloop {
                    my $t0 = [gettimeofday];
 
                    my $jsontext = to_json($json);
-                   #say "WebSocket message: $jsontext";
+                   say "WebSocket message: $jsontext";
 
                    if ( $json->{dummy}) {
                         # non ope
                        return;
                    }
+
+		   if ($json->{type} eq "wsidnotice"){
+                       $user_stat->{wsid} = $json->{wsid};
+                       return;
+		   }
 
                    if ( $json->{type} eq "checkuser" ) {
                        my $mess = { "type" => "rescheckuser" , "res" => $user_stat->{category} };
@@ -147,17 +152,27 @@ sub baseloop {
                        return;
                    }
 
+		   if ($json->{type} eq "openchatexists"){
+                       my $mess = { "type" => "openchatget" , "from" => $user_stat->{wsid} };
+		       my $messjson = to_json($mess);
+                       $tx->send($messjson);
+		       return;
+		   }
+
                    if ($json->{type} eq "openchat" ) {
 
-		       if ( $json->{user} eq "bot" ){
+		       for my $messevent (@{$json->{data}}){  # $jsonはlocal
+			      my $jsonobj = from_json($messevent);
+
+		       if ( $jsonobj->{user} eq "bot" ){
                            return;
 		       }
 
                        # callbot ~とメッセージが来るとオウム返しする。
-                       if ( $json->{text} =~ /^callbot/){
+                       if ( $jsonobj->{text} =~ /^callbot/){
 
 			       #my @line = split($json->{text}, /?/);
-                           my @line = split(// , $json->{text} );
+                           my @line = split(// , $jsonobj->{text} );
 
 			   my @word = splice(@line,7,$#line);
                            my $txt = join("",@word);
@@ -177,6 +192,7 @@ sub baseloop {
 			   undef $obj;
 			   undef $txtenc;
 		        }
+		        } # for
 
                     } # type openchat 
 
