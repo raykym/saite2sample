@@ -192,7 +192,19 @@ sub baseloop {
 			   undef $obj;
 			   undef $txtenc;
 		        }
-		        } # for
+
+                        if ( $jsonobj->{text} =~ /^site2procs/) {
+
+		            my $mess->{text} = `/home/debian/perlwork/mojowork/server/site2/lib/Site2/tools/subprocsite2.pl stat`;
+			       $mess->{tx} = $tx;
+                      
+			    sendmess($mess);
+
+			    undef $mess;
+                            return;
+                        }
+
+		        } # for messevent
 
                     } # type openchat 
 
