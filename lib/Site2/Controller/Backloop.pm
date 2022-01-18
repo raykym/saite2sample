@@ -9,6 +9,7 @@ use Math::Trig ':pi';
 
 use lib '/home/debian/perlwork/mojowork/server/site2/lib/Site2/Modules/';
 use Sessionid;
+use Backloop::Walkworld;
 
 my $clients = {};
 my $stream_io = {};
@@ -183,18 +184,6 @@ sub signaling {
 
 			 if ( $jsonobj->{type} eq "openchat" ) {
 			     # openchatのメッセージが流れたとき
-
-			  if (0){ # block
-			     # site2 1プロセス当たり50セッションを超えると確立でスルーする。
-                             my $uCount = keys(%$clients);
-			     if ($uCount >= 50 ) {
-				 if ( int(rand(100)) < 51 ){
-                                     return;
-			         }
-				 # スルーされるとイベントが出る
-			     }
-			     undef $uCount;
-			   } # block
 
                              my $jsontxt = to_json($jsonobj);
                              $self->app->pg->pubsub->notify( "openchat" => $jsontxt );
@@ -450,18 +439,12 @@ sub signaling {
 
 		   # walkworld用イベント   backloopにイベントは記録しない
 		   if ( $jsonobj->{walkworld} ){
+                           
 
-	           # logging
-	if (0){
-		   {  
-			$jsonobj->{datetime} = DateTime->now();
-		        $jsonobj->{ttl} = time();
-	             my $jsontext = to_json($jsonobj);
-		     my $datasec = { "data" => $jsontext };
-		        $self->app->pg->db->insert("backloop", $datasec );
-	            }   
-	    } # block
+			   #   Backloop::Walkworld::decision();
 
+			      
+			   #   if (0) { #block Backloop::Walkworldに移動
                        if ( $jsonobj->{walkworld} eq "postuserdata" ){
 
 			   $self->app->log->debug("DEBUG: walkworld userdata posted");
@@ -534,26 +517,29 @@ sub signaling {
 		       }
 
                        if ( $jsonobj->{walkworld} eq "entryghost" ) {
+			       # ブラウザが非同期に処理するためバーストする可能性がある 2secでリミットをかけると処理が回らなくて、結果的にバーストしているかもしれない。    
 
-		          my $keys = $redis->db->keys('ghostaccEntry*');  # リミッターを設定する
-			  my @npcuser = @$keys;
-			  my @count;
-                          for my $i (@npcuser){
+		               my $keys = $redis->db->keys('ghostaccEntry*');  # リミッターを設定する
+			       my @npcuser = @$keys;
+			       my @count = ();
+
+                               for my $i (@npcuser){
                           
-			     my $res = $redis->db->hvals($i);
+			           my $res = $redis->db->hvals($i);
 
-			     # $reshは配列の中身がテキストなので、バイナリに直す ブラウザ側での変換が1度で済む
-			     for my $j (@$res){
-				 push(@count , $j );
-			     }
+			           # $resは配列の中身がテキストなので、バイナリに直す ブラウザ側での変換が1度で済む
+			           for my $j (@$res){
+				       push(@count , $j );
+			           }
 
-			  } # for @npcuser 
+			       } # for @npcuser 
 
-			  if ( $#count >= 99 ) {
+
+			  if ( $#count >= 29 ) {   # 99ではCPUの負荷が大きすぎるので今はここまで
                               $self->app->log->info("DEBUG: npcuser process limit over ");
 			      return;
 			  }
-			  undef @count;
+			  #undef @count;
 
 			  my $setkey;
 
@@ -619,8 +605,17 @@ sub signaling {
 
                           $self->app->log->info("DEBUG: ghostacc set: $name $uid ");
 
-			  undef $keys;
+			       # @countを事前に再計算
+			       #  for my $i (@npcuser){
+			       #    my $res = $redis->db->hvals($i);
+			           # $reshは配列の中身がテキストなので、バイナリに直す ブラウザ側での変換が1度で済む
+				   #    for my $j (@$res){
+				   #    push(@count , $j );
+				   #}
+				   #} # for @npcuser 
+
 			  undef @npcuser;
+			  undef $keys;
 
                           return;
 		       }
@@ -711,6 +706,8 @@ sub signaling {
 
                            return;
 		       }
+
+		       #   } #block   ############################################################
 
                       # walkworldの末尾はreturnしない
 		   }  # if walkworld

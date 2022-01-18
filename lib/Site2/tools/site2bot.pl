@@ -197,6 +197,8 @@ sub baseloop {
 
 		            my $mess->{text} = `/home/debian/perlwork/mojowork/server/site2/lib/Site2/tools/subprocsite2.pl stat`;
 			       $mess->{tx} = $tx;
+
+			    Logging("$mess->{text}");
                       
 			    sendmess($mess);
 
@@ -274,7 +276,7 @@ $cvp->recv;
     } else {
 	    # childprocess
 
-$redis ||= Mojo::Redis->new("redis://10.140.0.12");
+$redis ||= Mojo::Redis->new("redis://10.140.0.13");
 
 #$pubsub ||= Mojo::Pg::PubSub->new( pg => $pg );
 

@@ -1,27 +1,31 @@
 % layout 'default';
 % title 'this page';
 
-<!-- The core Firebase JS SDK is always required and must be listed first -->
-<script src="https://www.gstatic.com/firebasejs/7.1.0/firebase-app.js"></script>
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.3/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.6.3/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
 
-<!-- TODO: Add SDKs for Firebase products that you want to use
-     https://firebase.google.com/docs/web/setup#available-libraries -->
-<script src="https://www.gstatic.com/firebasejs/6.2.0/firebase-messaging.js"></script>
-
-<script>
   // Your web app's Firebase configuration
-  var firebaseConfig = {
-    apiKey: "AIzaSyBMKyPUPxYcU6NRHOJt_pOmm6ue_ntZDRk",
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyCR0Y0oaAzu8637SqgZdoMMihdyCDN0aEg",
     authDomain: "velvety-decoder-677.firebaseapp.com",
     databaseURL: "https://velvety-decoder-677.firebaseio.com",
     projectId: "velvety-decoder-677",
     storageBucket: "velvety-decoder-677.appspot.com",
     messagingSenderId: "861600582037",
-    appId: "1:861600582037:web:f48e7a9196af388ba50e9c"
+    appId: "1:861600582037:web:f48e7a9196af388ba50e9c",
+    measurementId: "G-ZBH7Y2LMQF"
   };
+
   // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
 </script>
+
 
 
 <script type="text/javascript" src="https://maps.google.com/maps/api/js?key=AIzaSyBtLOrp4b2x0j71FcDb1Vn9topnZPTNtaM"></script>
@@ -1782,16 +1786,16 @@ function threeinit(){
         45,
         width / hight,
         1,
-        5000
+        500
         );
-    camera.position.set(0,+500,0);
+    camera.position.set(0,-50,+50);
     camera.lookAt(new THREE.Vector3(0,0,0));
 
     const geometry = new THREE.BoxGeometry(10, 10, 10);
 
     const material = new THREE.MeshStandardMaterial({
         color: 0xff0000,
-        wireframe: true
+        wireframe: false
         });
 
     const box = new THREE.Mesh(geometry, material);
@@ -1819,6 +1823,7 @@ function threeinit(){
   //  box.rotation.x += 0.01;
   //  box.rotation.y += 0.01;
   //  box.rotation.z += 0.01;
+
 /*
   if ( a.x > 0.1 ) {
     box.rotation.x += (a.x/100);
@@ -1832,21 +1837,19 @@ function threeinit(){
 */
 
     box.position.x += a.x ;
-  //  box.position.y += a.y ;
+    box.position.y += a.y ;
     box.position.z += a.z ;
 
   //  camera.rotation.x += 0.01;
   //  camera.rotation.y += 0.01;
   //  camera.rotation.z += 0.01;
 
-/*
   // 動くと残像が残り、止まると消える
   if ( (a.x < 0.1 ) && (a.y < 0.1) && (a.z < 0.1)){
     renderer.autoClearColor = true;   // 残像を消す
   } else {
     renderer.autoClearColor = false;   // 残像を残す
   }
-*/
 
     // レンダリング
     renderer.render(scene, camera);
@@ -2040,8 +2043,8 @@ var menuList = {};  // メニュー系トグル処理をまとめる
             getPosition();
 
             entry_wait = setInterval(function (){
-                ghostlisttimeout = 1;  // 2秒待って開始する
-            }, 2000);
+                ghostlisttimeout = 1;  // 5秒待って開始する 2秒だと複数になったときにバーストする
+            }, 5000);
             timerarray.push(entry_wait);
 
             var arrowdirect = 0;

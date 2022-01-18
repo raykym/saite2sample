@@ -687,7 +687,7 @@ sub baseloop {
                             "ttl" => "",
                           "place" => { "lat" => 0, "lng" => 0, "name" => ""},
                       "point_spn" => [],
-                      "uifecount" => 21600,   # 6hour  /sec
+                      "lifecount" => 21600,   # 6hour  /sec
                        "hitcount" => 0,
                        "chasecnt" => 0 ,
                          };
@@ -1895,7 +1895,7 @@ undef $cvp;
     } else {
 	    # childprocess
 
-$redis ||= Mojo::Redis->new("redis://10.140.0.12");
+$redis ||= Mojo::Redis->new("redis://10.140.0.13");
 
 $pubsub ||= Mojo::Pg::PubSub->new( pg => $pg );
 
