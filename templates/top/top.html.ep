@@ -1964,6 +1964,10 @@ var menuList = {};  // メニュー系トグル処理をまとめる
                   chatRoomInfo.pubstat = radioNodeList.value;
                   chatRoomInfo.roomname = document.getElementById('roomname').value;
 
+                  if ( chatRoomInfo.roomname == "" ) {
+                      return;  // 未入力はパスする
+                  }
+
               var mess = {"type" : "makechatroom" , 
                           "roomname": chatRoomInfo.roomname ,
                           "user" : localStorage.user ,
@@ -2485,11 +2489,11 @@ QRcodeをスナップショットで保存してください。
         <p id='roomdisplay'></p>
    %# CSSでhoverを設定して、inputタグをフォーカスすると説明が表示される
         <input type="text" id="roomname" class='explainmessage' placeholder="room..."> 
-        <input type="button" value="room in" onclick="menuList.makeChatRoom_roomIn();" style="display: inline;">
         <p class='fukidasi'>room名がキーワードとなります。入力後エンターを押して下さい。<br>
                publicはroom listに表示されて誰でも入れます。<br>
                二人以上入室したら、callを押すと通話出来ます。hangupで切断、退室になります<br>
                privateではroom名を知っている人だけが入れます。推測又は重複でも入れてしまいます。</p>
+        <input type="button" value="room in" onclick="menuList.makeChatRoom_roomIn();" style="display: inline;">
         <ul id="chatroommember" class='chatmem'></ul>
     </div>
     <div id="chatroomright">
