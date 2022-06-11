@@ -11,8 +11,8 @@ sub startup {
   # hypnotoad start
   $self->config(hypnotoad=>{
                        listen => ['http://*:4200'],
-                       accepts => 100000,
-                       clients => 10,
+                       accepts => 100,
+                       clients => 100,
                        workers => 2,
                        proxy => 1,
                        });
@@ -77,6 +77,8 @@ sub startup {
 
   # websocket
   $r->websocket('/wsocket/signaling')->to(controller => 'Backloop', action => 'signaling');
+
+  $r->websocket('/wsocket/backend')->to(controller => 'Backend', action => 'signaling');
 
   $r->any('*')->to('top#unknown');
 

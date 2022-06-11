@@ -22,7 +22,7 @@ sub signaling {
 
     #websocket 確認
     my $wsid = $self->tx->connection;
-       $self->app->log->info(sprintf 'Client connected: %s', $self->tx->connection);
+      #$self->app->log->info(sprintf 'Client connected: %s', $self->tx->connection);
        $clients->{$wsid} = $self->tx;
 
        # ブラウザにwsidを送信する
@@ -33,7 +33,7 @@ sub signaling {
        undef $wsidjson;
 
        my $keycount = keys(%{$clients});
-       $self->app->log->info("DEBUG: clients: $keycount PID: $$");
+       # $self->app->log->info("DEBUG: clients: $keycount PID: $$");
        undef $keycount;
 
        my $mess = { "type" => "checkuser" };
@@ -243,7 +243,7 @@ sub signaling {
 
 			 if ( $jsonobj->{type} eq "entrychatroom" ) {
                              # チャットルームへのエントリー
-			   $self->app->log->info("DEBUG: entrychatroom $jsonobj->{user}"); 
+			     #$self->app->log->info("DEBUG: entrychatroom $jsonobj->{user}"); 
 
 			     my $chatroomnamehash = Sessionid->new($jsonobj->{roomname})->guid;
 
@@ -410,7 +410,7 @@ sub signaling {
                          if ( $jsonobj->{type} eq "iconrotate" ){
 
 			     my $recodetext = $self->app->pg->db->select('icondata', 'params' , { 'oid' => $jsonobj->{oid} } )->hash;
-			        $self->app->log->info("DEBUG: $recodetext->{params}");
+			       #$self->app->log->info("DEBUG: $recodetext->{params}");
 			     my $params = from_json($recodetext->{params});
 			        $params->{oriented} = $jsonobj->{oriented};
 			     my $paramjson = to_json($params);
@@ -427,7 +427,7 @@ sub signaling {
 
 			    $self->app->pg->db->delete('icondata', { "oid" => $jsonobj->{oid} } );
 
-			    $self->app->log->info("DEBUG: delete icon data $jsonobj->{oid}");
+			    #$self->app->log->info("DEBUG: delete icon data $jsonobj->{oid}");
                             return;
 			 }
 
@@ -536,7 +536,7 @@ sub signaling {
 
 
 			  if ( $#count >= 29 ) {   # 99ではCPUの負荷が大きすぎるので今はここまで
-                              $self->app->log->info("DEBUG: npcuser process limit over ");
+			     #$self->app->log->info("DEBUG: npcuser process limit over ");
 			      return;
 			  }
 			  #undef @count;
@@ -558,7 +558,7 @@ sub signaling {
 		              } # for $key
 		          } # else 
 
-			  $self->app->log->info("DEBUG: setkey: $setkey");
+			  #$self->app->log->info("DEBUG: setkey: $setkey");
 
 			  # setkeyが設定されない場合　プロセスを追加してキーを設定する
 	        	  if ( ! defined $setkey ) {
@@ -569,7 +569,7 @@ sub signaling {
 
 			     $self->app->minion->enqueue(procadd => [ $setkey ] );
 
-			     $self->app->log->info("DEBUG: add npcuser_move.pl $sid ");
+			     #$self->app->log->info("DEBUG: add npcuser_move.pl $sid ");
 		          }
 
                           my @latlng = &kmlatlng($jsonobj->{lat}, $jsonobj->{lng});
@@ -603,7 +603,7 @@ sub signaling {
 
                           $redis->db->hset($setkey, $uid , $ghostaccjson );
 
-                          $self->app->log->info("DEBUG: ghostacc set: $name $uid ");
+			  #$self->app->log->info("DEBUG: ghostacc set: $name $uid ");
 
 			       # @countを事前に再計算
 			       #  for my $i (@npcuser){
@@ -748,7 +748,7 @@ sub signaling {
          $self->on(finish => sub{
                my ($self, $code,$reson) = @_;
 
-	           $self->app->log->info("finish connection $wsid");
+	          #$self->app->log->info("finish connection $wsid");
 
 	           $self->app->pg->pubsub->unlisten($wsid => $pubsub_cb->{$wsid});
 	           $self->app->pg->pubsub->unlisten("openchat" => $cb);
@@ -773,7 +773,7 @@ sub signaling {
 				   #  $self->app->log->info("DEBUG: id: $id");
 			       if ( $wsid eq $id ) {
 			           $redis->db->hdel($key , $id ); # wsidを削除する
-			           $self->app->log->info("DEBUG: delete ENTRY: $key $id");
+				   #$self->app->log->info("DEBUG: delete ENTRY: $key $id");
 			        }
 		            }
 		   } # for $res   ENTRYchatrooms
@@ -806,7 +806,7 @@ sub delclientwsid {
         return;
     }
 
-    $self->app->log->info("finish connection $wsid by client");
+    #$self->app->log->info("finish connection $wsid by client");
 
     my $res = $redis->db->keys("ENTRY$pubstat$roomnamehash");
 
@@ -815,7 +815,7 @@ sub delclientwsid {
             for my $id (@$fields){
                 if ( $wsid eq $id ) {
                     $redis->db->hdel($key , $id ); # wsidを削除する
-                    $self->app->log->info("DEBUG: delete ENTRY: $key $id");
+		    #$self->app->log->info("DEBUG: delete ENTRY: $key $id");
                 }
             }
     } # for $res   ENTRYchatrooms

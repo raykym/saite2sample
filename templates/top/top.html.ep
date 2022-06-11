@@ -1951,32 +1951,35 @@ var menuList = {};  // メニュー系トグル処理をまとめる
 
                     if ((event.keyCode === 13) && (document.getElementById('roomname').value )) {
 
-                        var element = document.getElementById('pubpri');
-                        var radioNodeList = element.pubstat;
-                            chatRoomInfo.pubstat = radioNodeList.value;
-                            chatRoomInfo.roomname = document.getElementById('roomname').value;
+                    menuList.makeChatRoom_roomIn();
 
-                        var mess = {"type" : "makechatroom" , 
-                                    "roomname": chatRoomInfo.roomname ,
-                                    "user" : localStorage.user ,
-                                    "icon_url" : localStorage.icon_url ,
-                                    "wsid" : sessionStorage.wsid ,
-                                    "pubstat" : chatRoomInfo.pubstat 
-                                   };
-                        %# roomnamehashはまだない
-                        var messjson = JSON.stringify(mess);
-                        ws.send(messjson);
-                   %#     document.getElementById('roomname').value = "";
-                        document.getElementById('roomdisplay').innerHTML = chatRoomInfo.pubstat + " " + chatRoomInfo.roomname ;
-                        document.getElementById('cchat').focus();
-                        document.getElementById('roomname').disabled = "true";
-
-                  %# roomnamehashに変わったので、位置を変える
-                  %#  member();
-                  %#  reloadmem();
-
-                    } // keydown
+                    } // keyCode
                 });
+
+
+     %# スマホでエンターキーを拾わないので別ボタンから発火するため keyDown内のコードを外だし
+     menuList.makeChatRoom_roomIn = function(){ 
+              var element = document.getElementById('pubpri');
+              var radioNodeList = element.pubstat;
+                  chatRoomInfo.pubstat = radioNodeList.value;
+                  chatRoomInfo.roomname = document.getElementById('roomname').value;
+
+              var mess = {"type" : "makechatroom" , 
+                          "roomname": chatRoomInfo.roomname ,
+                          "user" : localStorage.user ,
+                          "icon_url" : localStorage.icon_url ,
+                          "wsid" : sessionStorage.wsid ,
+                          "pubstat" : chatRoomInfo.pubstat 
+                          };
+              %# roomnamehashはまだない
+              var messjson = JSON.stringify(mess);
+                  ws.send(messjson);
+              %#     document.getElementById('roomname').value = "";
+                     document.getElementById('roomdisplay').innerHTML = chatRoomInfo.pubstat + " " + chatRoomInfo.roomname ;
+                     document.getElementById('cchat').focus();
+                     document.getElementById('roomname').disabled = "true";
+
+          } // roomIn
 
          // chatroom char chat 重複あり
                 document.getElementById('cchat').addEventListener("keydown" , function(){   
@@ -2482,6 +2485,7 @@ QRcodeをスナップショットで保存してください。
         <p id='roomdisplay'></p>
    %# CSSでhoverを設定して、inputタグをフォーカスすると説明が表示される
         <input type="text" id="roomname" class='explainmessage' placeholder="room..."> 
+        <input type="button" value="room in" onclick="menuList.makeChatRoom_roomIn();" style="display: inline;">
         <p class='fukidasi'>room名がキーワードとなります。入力後エンターを押して下さい。<br>
                publicはroom listに表示されて誰でも入れます。<br>
                二人以上入室したら、callを押すと通話出来ます。hangupで切断、退室になります<br>

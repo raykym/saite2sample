@@ -38,7 +38,7 @@ sub cicon {
   my $color = $image->colorAllocate($c1,$c2,$c3);
 
   if (! -f '/usr/share/fonts/truetype/fonts-japanese-mincho.ttf') {
-      $self->app->log->info("DEBUG: font not installed!!!");
+      #$self->app->log->info("DEBUG: font not installed!!!");
 	  }
 
     # $image->stringFT($color,"/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",30,0,10,40,$char);
@@ -339,7 +339,7 @@ sub imgout {
     my $where = { "id" => $id };
     my $res = $self->app->pg->db->select('icondata', $field , $where )->hash;
 
-    $self->app->log->info("DEBUG: res: $res->{params} ");
+    #$self->app->log->info("DEBUG: res: $res->{params} ");
 
     my $flg = 0;
         my @keys = keys(%$res);
