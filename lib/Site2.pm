@@ -3,6 +3,7 @@ use Mojo::Base 'Mojolicious';
 use Mojolicious::Plugin::OAuth2;
 use Mojo::Pg;
 use Mojolicious::Plugin::Minion;
+use Mojo::Redis;
 
 # This method will run once at server start
 sub startup {
@@ -11,8 +12,8 @@ sub startup {
   # hypnotoad start
   $self->config(hypnotoad=>{
                        listen => ['http://*:4200'],
-                       accepts => 100,
-                       clients => 100,
+                       accepts => 1000000,
+                       clients => 10000,
                        workers => 2,
                        proxy => 1,
                        });
@@ -31,9 +32,11 @@ sub startup {
      $self->plugin( Minion => { Pg => 'postgresql://minion:minionpass@%2fcloudsql%2fvelvety-decoder-677:asia-east1:post1/minion' });
 
 # $self->app->redis
-#   $self->app->helper( redis =>
-#        sub { state $redis ||= Mojo::Redis->new(url => "redis://$redisserver:6379");
-#         });
+   state $redisserver = $self->app->config->{redisserver};
+   $self->app->helper( redis =>
+        sub { state $redis ||= Mojo::Redis->new("redis://$redisserver");
+         });
+
 
 #OAuth2
      $self->plugin('OAuth2' => {

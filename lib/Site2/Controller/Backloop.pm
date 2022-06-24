@@ -431,6 +431,73 @@ sub signaling {
                             return;
 			 }
 
+        # Backend
+        # latlng entry 位置情報更新
+        # unitが自分の位置情報を更新する
+        # 登録情報はwsidのみでその他の情報はユニットが個別に取得する
+        if ( $jsonobj->{type} eq 'entrylatlng' ){
+
+
+            eval{ $redis->db->zadd('latrank' , $jsonobj->{lat}, $jsonobj->{wsid})};
+            if ($@){
+                my $mess = { type => 'error' , msg => $@ };
+                $clients->{$wsid}->send({json => $mess});
+                undef $mess;
+            }
+
+            eval{ $redis->db->zadd('lngrank' , $jsonobj->{lng}, $jsonobj->{wsid})};
+            if ($@){
+                my $mess = { type => 'error2' , msg => $@ };
+                $clients->{$wsid}->send({json => $mess});
+                undef $mess;
+            }
+
+            my $mess = { type => 'acceptlatlng' };
+            $clients->{$wsid}->send({json => $mess});
+            undef $mess;
+
+            return;
+        }
+
+        # member list request
+        # unitが位置情報を送信して、見える範囲のwsidを応答する
+        if ( $jsonobj->{type} eq 'wsidrequest' ){
+
+            my ( $lat_min , $lat_max , $lng_min, $lng_max ) = &kmlatlng($jsonobj->{lat} , $jsonobj->{lng} );
+
+            my $lats = $redis->db->zrangebyscore('latrank' , $lat_min , $lat_max );
+            my $lngs = $redis->db->zrangebyscore('lngrank' , $lng_min , $lng_max );
+
+            #突合して一致するものをまとめる 自分も含まれる
+            my @wsidlist = ();
+            for my $i (@$lats) {
+                for my $j (@$lngs) {
+                    if ( $i eq $j ){
+                        push(@wsidlist , $i);
+                        last;
+                    }
+                }
+            }
+
+            my $mess = { type => 'wsidresponse', wsids => \@wsidlist };
+
+            $clients->{$wsid}->send({json => $mess});
+
+            undef $mess;
+            undef @wsidlist;
+            undef $lngs;
+            undef $lats;
+            undef $lat_min;
+            undef $lat_max;
+            undef $lng_min;
+            undef $lng_max;
+
+            return;
+        }
+        # backend over
+
+
+
 
 			 
 

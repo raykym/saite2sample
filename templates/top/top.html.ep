@@ -1983,7 +1983,7 @@ var menuList = {};  // メニュー系トグル処理をまとめる
                      document.getElementById('cchat').focus();
                      document.getElementById('roomname').disabled = "true";
 
-          } // roomIn
+          } // _roomIn
 
          // chatroom char chat 重複あり
                 document.getElementById('cchat').addEventListener("keydown" , function(){   
